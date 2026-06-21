@@ -91,6 +91,4 @@ chore:    构建/工具
 - `develop`：开发分支（从 develop 切出 feature 分支，PR 合并回 develop）
 - `feature/*`：各成员的功能分支
 
-## 开源仓库地址
 
-TODO：创建 GitHub 仓库后，在此填写完整地址
