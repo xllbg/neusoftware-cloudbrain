@@ -1,60 +1,71 @@
-// ===== 通用响应类型 =====
+// ===== 统一响应类型（匹配后端 Result.java）=====
 export interface ApiResult<T = any> {
   code: number
   message: string
   data: T
 }
 
-export interface PageResult<T> {
-  content: T[]
-  totalElements: number
-  totalPages: number
-  size: number
-  number: number
-}
-
-// ===== 用户相关 =====
-export interface UserInfo {
-  id: number
+// ===== 登录/注册（匹配后端 LoginResponse）=====
+export interface LoginResult {
+  token: string
+  userId: number
   username: string
   name: string
-  role: 'PATIENT' | 'DOCTOR'
-  phone: string
-  gender: string
-  age: number
+  role: string
 }
 
 export interface LoginForm {
   username: string
   password: string
-  role: 'PATIENT' | 'DOCTOR'
 }
 
 export interface RegisterForm {
   username: string
   password: string
   name: string
-  phone: string
   gender: string
   age: number
+  phone: string
+  idCard?: string
+  address?: string
 }
 
-export interface LoginResult {
-  token: string
-  userInfo: UserInfo
-}
-
-// ===== 医生相关 =====
 export interface DoctorInfo {
   id: number
   name: string
+  gender: string
+  age: number
   department: string
   title: string
-  description: string
-  available: boolean
+  hospital: string
+  phone: string
+  avatar: string
+  introduction: string
 }
 
-// ===== 挂号相关 =====
+// ===== 分诊（匹配后端 TriageRequest / TriageResponse）=====
+export interface TriageRequest {
+  patientId: number
+  age: number
+  gender: string
+  symptoms: string
+}
+
+export interface TriageResult {
+  department: string
+  reasoning: string
+  doctors: TriageDoctor[]
+}
+
+export interface TriageDoctor {
+  id: number
+  name: string
+  title: string
+  hospital: string
+}
+
+// ===== 以下模块后端尚未实现，保留类型定义供后续对接 =====
+
 export interface RegistrationForm {
   patientId: number
   doctorId: number
@@ -72,35 +83,10 @@ export interface RegistrationRecord {
   department: string
   registrationDate: string
   timeSlot: string
-  status: 'PENDING' | 'COMPLETED' | 'CANCELLED'
+  status: string
   symptom: string
   triageResult: string
   createTime: string
-}
-
-// ===== 分诊相关 =====
-export interface TriageRequest {
-  symptom: string
-  patientId?: number
-}
-
-export interface TriageResult {
-  department: string
-  doctorId: number
-  doctorName: string
-  doctorTitle: string
-  confidence: number
-  reason: string
-  suggestions: string[]
-}
-
-// ===== 处方相关 =====
-export interface PrescriptionItem {
-  drugName: string
-  dosage: string
-  frequency: string
-  duration: string
-  note: string
 }
 
 export interface PrescriptionForm {
@@ -108,6 +94,14 @@ export interface PrescriptionForm {
   doctorId: number
   diagnosis: string
   items: PrescriptionItem[]
+}
+
+export interface PrescriptionItem {
+  drugName: string
+  dosage: string
+  frequency: string
+  duration: string
+  note: string
 }
 
 export interface PrescriptionRecord {
@@ -118,19 +112,18 @@ export interface PrescriptionRecord {
   doctorName: string
   diagnosis: string
   items: PrescriptionItem[]
-  status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  status: string
   aiCheckResult: string
   createTime: string
 }
 
 export interface AICheckResult {
   approved: boolean
-  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH'
+  riskLevel: string
   suggestions: string[]
   warnings: string[]
 }
 
-// ===== 病历相关 =====
 export interface MedicalRecordForm {
   patientId: number
   doctorId: number
