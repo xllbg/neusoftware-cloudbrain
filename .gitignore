@@ -29,6 +29,8 @@ dist-ssr/
 *.iml
 *.iws
 *.ipr
+*.swp
+*.swo
 
 # macOS
 .DS_Store
@@ -48,5 +50,8 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
-# 本地文档（任务书、分工方案、日志等）
+# Vite cache
+.vite/
+
+# 本地文档
 文档/
