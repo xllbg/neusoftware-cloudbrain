@@ -4,17 +4,17 @@ server:
 spring:
   profiles:
     active: dev
-  
+
   datasource:
-    url: jdbc:mysql://localhost:3306/cloudbrain?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
-    username: root
-    password: xuanxuan0513
+    url: ${DB_URL:jdbc:mysql://localhost:3306/cloudbrain?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
-  
+
   sql:
     init:
       mode: never
-  
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -30,13 +30,13 @@ knife4j:
     language: zh_cn
 
 jwt:
-  secret: cloudbrain-neusoft-2026-jwt-secret-key
-  expiration: 86400000
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION:86400000}
 
 deepseek:
-  api-key: sk-01cd69733129433fa07f73b7721c8cb0
-  base-url: https://api.deepseek.com
-  model: deepseek-chat
+  api-key: ${DEEPSEEK_API_KEY}
+  base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
+  model: ${DEEPSEEK_MODEL:deepseek-chat}
 
 logging:
   level:

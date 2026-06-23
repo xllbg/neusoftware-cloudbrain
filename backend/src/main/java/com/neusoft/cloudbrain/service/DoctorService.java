@@ -8,6 +8,7 @@ import com.neusoft.cloudbrain.exception.BusinessException;
 import com.neusoft.cloudbrain.repository.DoctorRepository;
 import com.neusoft.cloudbrain.util.JwtUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -19,6 +20,7 @@ public class DoctorService {
 
     private final DoctorRepository doctorRepository;
     private final JwtUtils jwtUtils;
+    private final PasswordEncoder passwordEncoder;
 
     public List<DoctorVO> listDoctors(String department) {
         List<Doctor> doctors;
@@ -42,7 +44,7 @@ public class DoctorService {
         Doctor doctor = doctorRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new BusinessException("用户名或密码错误"));
 
-        if (!doctor.getPassword().equals(request.getPassword())) {
+        if (!passwordEncoder.matches(request.getPassword(), doctor.getPassword())) {
             throw new BusinessException("用户名或密码错误");
         }
 
