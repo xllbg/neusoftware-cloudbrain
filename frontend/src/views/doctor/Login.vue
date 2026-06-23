@@ -74,7 +74,7 @@ async function handleLogin() {
   if (!valid) return
   submitting.value = true
   try {
-    await userStore.doctorLogin(loginForm)
+    await userStore.doctorLoginByPhone(loginForm)
     ElMessage.success("登录成功")
     router.push("/doctor/patients")
   } catch (e: any) {

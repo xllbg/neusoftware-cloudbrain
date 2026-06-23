@@ -53,7 +53,7 @@ async function handleLogin() {
   if (!valid) return
   loading.value = true
   try {
-    await userStore.patientLogin(loginForm)
+    await userStore.patientLoginByPhone(loginForm)
     ElMessage.success("登录成功")
     router.push("/patient/triage")
   } catch { }

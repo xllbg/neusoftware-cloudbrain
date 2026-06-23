@@ -104,6 +104,18 @@ export function post<T = any>(url: string, data?: any, config?: AxiosRequestConf
   return request.post<any, ApiResult<T>>(url, data, config)
 }
 
+// ===== RSA 加密 POST（用于登录/注册）=====
+export async function encryptedPost<T = any>(url: string, data: Record<string, unknown>) {
+  const { encryptPayload } = await import("@/utils/crypto")
+  const { body } = await encryptPayload(data)
+  return request.post<any, ApiResult<T>>(url, body, {
+    headers: {
+      "Content-Type": "text/plain",
+      "X-Encrypted": "true",
+    },
+  })
+}
+
 // ===== 统一 PUT 请求 =====
 export function put<T = any>(url: string, data?: any, config?: AxiosRequestConfig) {
   return request.put<any, ApiResult<T>>(url, data, config)

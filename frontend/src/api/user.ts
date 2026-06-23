@@ -1,21 +1,29 @@
-import { post, get } from "./index"
+import { get, post, encryptedPost } from "./index"
 import type { LoginForm, RegisterForm, LoginResult } from "@/types"
 
 export function registerPatient(data: RegisterForm) {
-  return post<LoginResult>("/patient/register", data)
+  return encryptedPost<LoginResult>("/patient/register", data)
 }
 
-export function loginPatient(data: { name: string; phone: string; password: string }) {
-  return post<LoginResult>("/patient/login", data)
+export function loginPatient(data: { username: string; password: string }) {
+  return encryptedPost<LoginResult>("/patient/login", data)
 }
 
-export function loginDoctor(data: { name: string; phone: string; password: string }) {
-  return post<LoginResult>("/doctor/login", data)
+export function loginPatientByPhone(data: { name: string; phone: string; password: string }) {
+  return encryptedPost<LoginResult>("/patient/login/phone", data)
 }
 
-// 医生注册
+export function loginDoctor(data: { username: string; password: string }) {
+  return encryptedPost<LoginResult>("/doctor/login", data)
+}
+
+export function loginDoctorByPhone(data: { name: string; phone: string; password: string }) {
+  return encryptedPost<LoginResult>("/doctor/login/phone", data)
+}
+
+// 医生注册（加密传输）
 export function registerDoctor(data: any) {
-  return post<string>("/doctor/register", data)
+  return encryptedPost<string>("/doctor/register", data)
 }
 
 // 查询医生审核状态（姓名+手机号）
