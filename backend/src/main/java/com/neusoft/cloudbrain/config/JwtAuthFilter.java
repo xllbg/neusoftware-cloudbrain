@@ -29,18 +29,23 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             "/swagger-resources/**",
             "/webjars/**",
             "/favicon.ico",
+            "/",
             "/api/patient/register",
             "/api/patient/login",
             "/api/doctor/list",
             "/api/doctor/detail",
-            "/api/doctor/login",
-            "/api/doctor/register",
-            "/api/doctor/status",
-            "/api/doctor/pending",
-            "/api/doctor/all-with-status",
-            "/api/doctor/approve",
-            "/api/doctor/reject",
-            "/api/triage/consult"
+            "/api/triage/consult",
+            "/api/registration/create",
+            "/api/registration/list",
+            "/api/registration/cancel",
+            "/api/medical-record/generate",
+            "/api/medical-record/save",
+            "/api/medical-record/list",
+            "/api/medical-record/detail",
+            "/api/prescription/create",
+            "/api/prescription/check",
+            "/api/prescription/list",
+            "/api/prescription/detail"
     );
 
     @Override

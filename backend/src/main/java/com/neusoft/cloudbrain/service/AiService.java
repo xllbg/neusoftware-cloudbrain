@@ -213,4 +213,66 @@ public class AiService {
 
         return "内科";
     }
+
+    public String generateMedicalRecord(String dialogueText) {
+        String prompt = String.format(
+                "你是医疗病历生成专家。根据以下医患对话记录，生成结构化病历。\n" +
+                "请以JSON格式返回，包含以下字段：\n" +
+                "presentIllness: 现病史\n" +
+                "pastHistory: 既往史\n" +
+                "physicalExamination: 体格检查\n" +
+                "diagnosis: 初步诊断\n" +
+                "treatmentPlan: 治疗意见\n\n" +
+                "对话记录：\n%s\n\n" +
+                "只返回JSON，不要其他文字。",
+                dialogueText
+        );
+
+        try {
+            String response = callDeepSeekApi(prompt);
+            return parseContentFromResponse(response);
+        } catch (Exception e) {
+            log.error("调用 DeepSeek API 生成病历失败", e);
+            return "{\"error\": \"AI服务暂时不可用，请手动填写病历\"}";
+        }
+    }
+
+    public String checkPrescription(String medicineList, String patientInfo) {
+        String prompt = String.format(
+                "你是医疗处方审核专家。请审核以下处方并提供用药建议。\n\n" +
+                "药品列表：\n%s\n\n" +
+                "患者信息：\n%s\n\n" +
+                "请提供：\n" +
+                "1. 用药建议\n" +
+                "2. 药物相互作用检测\n" +
+                "3. 风险等级（low/medium/high）\n" +
+                "4. 风险提示",
+                medicineList, patientInfo
+        );
+
+        try {
+            String response = callDeepSeekApi(prompt);
+            return parseContentFromResponse(response);
+        } catch (Exception e) {
+            log.error("调用 DeepSeek API 审核处方失败", e);
+            return "{\"error\": \"AI服务暂时不可用，请手动审核\"}";
+        }
+    }
+
+    private String parseContentFromResponse(String jsonResponse) {
+        try {
+            int contentStart = jsonResponse.indexOf("\"content\":\"");
+            if (contentStart == -1) {
+                return jsonResponse;
+            }
+            contentStart += 11;
+            int contentEnd = jsonResponse.indexOf("\"", contentStart);
+            String content = jsonResponse.substring(contentStart, contentEnd);
+            content = content.replace("\\n", "").replace("\\\"", "\"").replace("\\\\", "\\");
+            return content;
+        } catch (Exception e) {
+            log.warn("解析 AI 响应失败: {}", jsonResponse);
+            return jsonResponse;
+        }
+    }
 }
