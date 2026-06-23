@@ -2,33 +2,33 @@ import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router"
 import { ElMessage } from "element-plus"
 import { isLoggedIn, isPatient, isDoctor } from "@/utils/auth"
 
-// 路由表
+// 患者端手机布局（包装所有患者页面）
+const PatientLayout = () => import("@/components/PatientLayout.vue")
+
 const routes: RouteRecordRaw[] = [
+  // ===== 首页（角色选择）=====
   {
     path: "/",
-    redirect: "/patient/login",
+    name: "Home",
+    component: () => import("@/views/Home.vue"),
+    meta: { title: "智慧云脑诊疗平台" },
   },
-  // ===== 患者端路由 =====
+  // ===== 患者端路由（含手机布局）=====
   {
     path: "/patient",
+    component: PatientLayout,
     children: [
       {
         path: "login",
         name: "PatientLogin",
         component: () => import("@/views/patient/Login.vue"),
-        meta: { title: "患者登录", guest: true },
+        meta: { title: "患者登录", guest: true, hideTabbar: true },
       },
       {
         path: "register",
         name: "PatientRegister",
         component: () => import("@/views/patient/Register.vue"),
-        meta: { title: "患者注册", guest: true },
-      },
-      {
-        path: "profile",
-        name: "PatientProfile",
-        component: () => import("@/views/patient/Profile.vue"),
-        meta: { title: "个人中心", requiresAuth: true, role: "PATIENT" },
+        meta: { title: "患者注册", guest: true, hideTabbar: true },
       },
       {
         path: "triage",
@@ -60,9 +60,15 @@ const routes: RouteRecordRaw[] = [
         component: () => import("@/views/patient/MyRecords.vue"),
         meta: { title: "电子病历", requiresAuth: true, role: "PATIENT" },
       },
+      {
+        path: "profile",
+        name: "PatientProfile",
+        component: () => import("@/views/patient/Profile.vue"),
+        meta: { title: "个人中心", requiresAuth: true, role: "PATIENT" },
+      },
     ],
   },
-  // ===== 医生端路由 =====
+  // ===== 医生端路由（电脑端布局）=====
   {
     path: "/doctor",
     children: [
@@ -70,7 +76,13 @@ const routes: RouteRecordRaw[] = [
         path: "login",
         name: "DoctorLogin",
         component: () => import("@/views/doctor/Login.vue"),
-        meta: { title: "医生登录", guest: true },
+        meta: { title: "医生登录/注册", guest: true },
+      },
+      {
+        path: "register",
+        name: "DoctorRegister",
+        component: () => import("@/views/doctor/Register.vue"),
+        meta: { title: "医生注册", guest: true },
       },
       {
         path: "patients",
@@ -104,6 +116,18 @@ const routes: RouteRecordRaw[] = [
       },
     ],
   },
+  // ===== 管理员路由 =====
+  {
+    path: "/admin",
+    children: [
+      {
+        path: "pending-doctors",
+        name: "PendingDoctors",
+        component: () => import("@/views/admin/PendingDoctors.vue"),
+        meta: { title: "待审批医生" },
+      },
+    ],
+  },
   // ===== 错误页面 =====
   {
     path: "/:pathMatch(.*)*",
@@ -118,9 +142,7 @@ const router = createRouter({
   routes,
 })
 
-// ===== 路由守卫（登录拦截）=====
 router.beforeEach((to, _from, next) => {
-  // 设置页面标题
   document.title = (to.meta.title as string)
     ? `${to.meta.title} - 智慧云脑诊疗平台`
     : "智慧云脑诊疗平台"
@@ -131,18 +153,17 @@ router.beforeEach((to, _from, next) => {
   if (requiresAuth) {
     if (!isLoggedIn()) {
       ElMessage.warning("请先登录")
-      const loginPath = role === "DOCTOR" ? "/doctor/login" : "/patient/login"
-      next(loginPath)
+      next("/")
       return
     }
     if (role === "PATIENT" && !isPatient()) {
       ElMessage.error("请使用患者账号登录")
-      next("/patient/login")
+      next("/")
       return
     }
     if (role === "DOCTOR" && !isDoctor()) {
       ElMessage.error("请使用医生账号登录")
-      next("/doctor/login")
+      next("/")
       return
     }
   }

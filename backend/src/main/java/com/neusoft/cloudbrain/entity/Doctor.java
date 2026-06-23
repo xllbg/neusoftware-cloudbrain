@@ -54,6 +54,13 @@ public class Doctor {
     @Column(columnDefinition = "TEXT")
     private String introduction;
 
+    // 审核状态: PENDING-待审批, APPROVED-已批准, REJECTED-已拒绝
+    @Column(length = 20)
+    private String status = "PENDING";
+
+    @Column(length = 255)
+    private String rejectReason;
+
     @CreatedDate
     @Column(updatable = false)
     private LocalDateTime createdAt;

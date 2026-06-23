@@ -15,7 +15,8 @@ export interface LoginResult {
 }
 
 export interface LoginForm {
-  username: string
+  name: string
+  phone: string
   password: string
 }
 

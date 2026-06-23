@@ -48,11 +48,18 @@ public class PatientService {
     }
 
     public LoginResponse login(PatientLoginRequest request) {
-        Patient patient = patientRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new BusinessException("用户名或密码错误"));
+        // 按手机号查找
+        Patient patient = patientRepository.findByPhone(request.getPhone())
+                .orElseThrow(() -> new BusinessException("姓名、手机号或密码错误"));
 
+        // 验证姓名匹配
+        if (!patient.getName().equals(request.getName())) {
+            throw new BusinessException("姓名、手机号或密码错误");
+        }
+
+        // 验证密码
         if (!patient.getPassword().equals(request.getPassword())) {
-            throw new BusinessException("用户名或密码错误");
+            throw new BusinessException("姓名、手机号或密码错误");
         }
 
         String token = jwtUtils.generateToken(patient.getId(), patient.getUsername(), "PATIENT");

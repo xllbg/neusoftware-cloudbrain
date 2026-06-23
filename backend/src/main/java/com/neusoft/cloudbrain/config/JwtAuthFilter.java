@@ -33,6 +33,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             "/api/patient/login",
             "/api/doctor/list",
             "/api/doctor/detail",
+            "/api/doctor/login",
+            "/api/doctor/register",
+            "/api/doctor/status",
+            "/api/doctor/pending",
+            "/api/doctor/all-with-status",
+            "/api/doctor/approve",
+            "/api/doctor/reject",
             "/api/triage/consult"
     );
 

@@ -1,18 +1,39 @@
-// 用户登录/注册 API（对齐后端 PatientController）
 import { post, get } from "./index"
 import type { LoginForm, RegisterForm, LoginResult } from "@/types"
 
-// 患者注册 → POST /api/patient/register { username, password, name, gender, age, phone }
 export function registerPatient(data: RegisterForm) {
   return post<LoginResult>("/patient/register", data)
 }
 
-// 患者登录 → POST /api/patient/login { username, password }
-export function loginPatient(data: { username: string; password: string }) {
+export function loginPatient(data: { name: string; phone: string; password: string }) {
   return post<LoginResult>("/patient/login", data)
 }
 
-// 医生登录（后端暂未实现，保留接口）
-export function loginDoctor(data: { username: string; password: string }) {
+export function loginDoctor(data: { name: string; phone: string; password: string }) {
   return post<LoginResult>("/doctor/login", data)
+}
+
+// 医生注册
+export function registerDoctor(data: any) {
+  return post<string>("/doctor/register", data)
+}
+
+// 查询医生审核状态（姓名+手机号）
+export function getDoctorStatus(name: string, phone: string) {
+  return get<any>("/doctor/status", { name, phone })
+}
+
+// 获取待审批医生列表（管理员）
+export function getPendingDoctors() {
+  return get<any[]>("/doctor/pending")
+}
+
+// 批准医生
+export function approveDoctor(id: number) {
+  return post<string>("/doctor/approve", { id })
+}
+
+// 拒绝医生
+export function rejectDoctor(id: number, reason: string) {
+  return post<string>("/doctor/reject", { id, reason })
 }

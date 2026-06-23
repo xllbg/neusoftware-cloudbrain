@@ -22,6 +22,7 @@ public class DoctorVO {
     private String phone;
     private String avatar;
     private String introduction;
+    private String status;
 
     public static DoctorVO fromEntity(Doctor doctor) {
         return DoctorVO.builder()
@@ -35,6 +36,7 @@ public class DoctorVO {
                 .phone(doctor.getPhone())
                 .avatar(doctor.getAvatar())
                 .introduction(doctor.getIntroduction())
+                .status(doctor.getStatus())
                 .build();
     }
 }

@@ -2,18 +2,15 @@ server:
   port: 8080
 
 spring:
-  profiles:
-    active: dev
-  
   datasource:
-    url: jdbc:mysql://localhost:3306/cloudbrain?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+    url: jdbc:mysql://localhost:3307/cloudbrain?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
     username: root
-    password: xuanxuan0513
+    password: duanyuru7822
     driver-class-name: com.mysql.cj.jdbc.Driver
   
   sql:
     init:
-      mode: never
+      mode: always
   
   jpa:
     hibernate:
@@ -34,7 +31,7 @@ jwt:
   expiration: 86400000
 
 deepseek:
-  api-key: sk-01cd69733129433fa07f73b7721c8cb0
+  api-key: ${DEEPSEEK_API_KEY:sk-placeholder}
   base-url: https://api.deepseek.com
   model: deepseek-chat
 
