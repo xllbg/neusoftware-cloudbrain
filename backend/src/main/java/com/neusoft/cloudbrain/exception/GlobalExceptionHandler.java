@@ -1,6 +1,6 @@
 package com.neusoft.cloudbrain.exception;
 
-import com.neusoft.cloudbrain.dto.Result;
+import com.neusoft.cloudbrain.dto.CommonResult;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.FieldError;
@@ -17,14 +17,14 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
-    public Result<Void> handleBusinessException(BusinessException e) {
+    public CommonResult<Void> handleBusinessException(BusinessException e) {
         log.error("业务异常: {}", e.getMessage());
-        return Result.fail(e.getCode(), e.getMessage());
+        return CommonResult.fail(e.getCode(), e.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public Result<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException e) {
+    public CommonResult<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException e) {
         Map<String, String> errors = new HashMap<>();
         e.getBindingResult().getAllErrors().forEach(error -> {
             String fieldName = ((FieldError) error).getField();
@@ -32,20 +32,20 @@ public class GlobalExceptionHandler {
             errors.put(fieldName, errorMessage);
         });
         log.error("参数校验失败: {}", errors);
-        return Result.fail(400, "参数校验失败");
+        return CommonResult.fail(400, "参数校验失败");
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public Result<Void> handleIllegalArgumentException(IllegalArgumentException e) {
+    public CommonResult<Void> handleIllegalArgumentException(IllegalArgumentException e) {
         log.error("非法参数异常: {}", e.getMessage());
-        return Result.fail(400, e.getMessage());
+        return CommonResult.fail(400, e.getMessage());
     }
 
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public Result<Void> handleAllExceptions(Exception e) {
+    public CommonResult<Void> handleAllExceptions(Exception e) {
         log.error("系统异常: ", e);
-        return Result.fail("系统内部错误，请稍后重试");
+        return CommonResult.fail("系统内部错误，请稍后重试");
     }
 }

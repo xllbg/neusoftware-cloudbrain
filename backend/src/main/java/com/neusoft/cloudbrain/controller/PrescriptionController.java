@@ -1,10 +1,9 @@
 package com.neusoft.cloudbrain.controller;
 
+import com.neusoft.cloudbrain.dto.CommonResult;
 import com.neusoft.cloudbrain.dto.PrescriptionRequest;
 import com.neusoft.cloudbrain.dto.PrescriptionResponse;
-import com.neusoft.cloudbrain.dto.Result;
 import com.neusoft.cloudbrain.entity.Prescription;
-import com.neusoft.cloudbrain.entity.PrescriptionCheck;
 import com.neusoft.cloudbrain.service.PrescriptionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -26,7 +25,7 @@ public class PrescriptionController {
 
     @PostMapping("/create")
     @Operation(summary = "创建处方", description = "医生开具处方")
-    public Result<PrescriptionResponse> create(@Valid @RequestBody PrescriptionRequest request) {
+    public CommonResult<PrescriptionResponse> create(@Valid @RequestBody PrescriptionRequest request) {
         Prescription prescription = prescriptionService.createPrescription(
                 request.getPatientId(),
                 request.getDoctorId(),
@@ -35,12 +34,12 @@ public class PrescriptionController {
                 request.getDosage(),
                 request.getUsage()
         );
-        return Result.success("处方创建成功", toResponse(prescription));
+        return CommonResult.success("处方创建成功", toResponse(prescription));
     }
 
     @PostMapping("/check")
     @Operation(summary = "AI审核处方", description = "AI审核处方用药安全")
-    public Result<PrescriptionResponse.AiCheckResult> check(@RequestParam Long prescriptionId) {
+    public CommonResult<PrescriptionResponse.AiCheckResult> check(@RequestParam Long prescriptionId) {
         Map<String, Object> result = prescriptionService.checkPrescriptionByAi(prescriptionId);
 
         PrescriptionResponse.AiCheckResult aiResult = PrescriptionResponse.AiCheckResult.builder()
@@ -51,24 +50,24 @@ public class PrescriptionController {
                 .riskHints((String) result.get("riskHints"))
                 .build();
 
-        return Result.success(aiResult);
+        return CommonResult.success(aiResult);
     }
 
     @GetMapping("/list")
     @Operation(summary = "处方列表", description = "获取患者的处方列表")
-    public Result<List<PrescriptionResponse>> list(@RequestParam Long patientId) {
+    public CommonResult<List<PrescriptionResponse>> list(@RequestParam Long patientId) {
         List<Prescription> prescriptions = prescriptionService.getPatientPrescriptions(patientId);
         List<PrescriptionResponse> responses = prescriptions.stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
-        return Result.success(responses);
+        return CommonResult.success(responses);
     }
 
     @GetMapping("/detail")
     @Operation(summary = "处方详情", description = "获取处方详情")
-    public Result<PrescriptionResponse> detail(@RequestParam Long id) {
+    public CommonResult<PrescriptionResponse> detail(@RequestParam Long id) {
         Prescription prescription = prescriptionService.getPrescriptionDetail(id);
-        return Result.success(toResponse(prescription));
+        return CommonResult.success(toResponse(prescription));
     }
 
     private PrescriptionResponse toResponse(Prescription prescription) {

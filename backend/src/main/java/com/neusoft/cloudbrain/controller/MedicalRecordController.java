@@ -1,8 +1,8 @@
 package com.neusoft.cloudbrain.controller;
 
+import com.neusoft.cloudbrain.dto.CommonResult;
 import com.neusoft.cloudbrain.dto.MedicalRecordRequest;
 import com.neusoft.cloudbrain.dto.MedicalRecordResponse;
-import com.neusoft.cloudbrain.dto.Result;
 import com.neusoft.cloudbrain.entity.MedicalRecord;
 import com.neusoft.cloudbrain.service.MedicalRecordService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,7 +25,7 @@ public class MedicalRecordController {
 
     @PostMapping("/generate")
     @Operation(summary = "AI生成病历", description = "根据对话文本AI生成结构化病历")
-    public Result<MedicalRecordResponse.AiMedicalRecordResult> generate(
+    public CommonResult<MedicalRecordResponse.AiMedicalRecordResult> generate(
             @RequestParam Long patientId,
             @RequestBody Map<String, String> request) {
         String dialogueText = request.get("dialogueText");
@@ -40,12 +40,12 @@ public class MedicalRecordController {
                 .aiRawResult((String) result.get("aiRawResult"))
                 .build();
 
-        return Result.success(aiResult);
+        return CommonResult.success(aiResult);
     }
 
     @PostMapping("/save")
     @Operation(summary = "保存病历", description = "保存（编辑后的）病历")
-    public Result<MedicalRecord> save(@Valid @RequestBody MedicalRecordRequest request) {
+    public CommonResult<MedicalRecord> save(@Valid @RequestBody MedicalRecordRequest request) {
         MedicalRecord record = medicalRecordService.createMedicalRecord(
                 request.getPatientId(),
                 request.getDoctorId(),
@@ -57,24 +57,24 @@ public class MedicalRecordController {
                 request.getDiagnosis(),
                 request.getTreatmentPlan()
         );
-        return Result.success("病历保存成功", record);
+        return CommonResult.success("病历保存成功", record);
     }
 
     @GetMapping("/list")
     @Operation(summary = "病历列表", description = "获取患者的病历列表")
-    public Result<List<MedicalRecordResponse>> list(@RequestParam Long patientId) {
+    public CommonResult<List<MedicalRecordResponse>> list(@RequestParam Long patientId) {
         List<MedicalRecord> records = medicalRecordService.getPatientMedicalRecords(patientId);
         List<MedicalRecordResponse> responses = records.stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
-        return Result.success(responses);
+        return CommonResult.success(responses);
     }
 
     @GetMapping("/detail")
     @Operation(summary = "病历详情", description = "获取病历详情")
-    public Result<MedicalRecordResponse> detail(@RequestParam Long id) {
+    public CommonResult<MedicalRecordResponse> detail(@RequestParam Long id) {
         MedicalRecord record = medicalRecordService.getMedicalRecordDetail(id);
-        return Result.success(toResponse(record));
+        return CommonResult.success(toResponse(record));
     }
 
     private MedicalRecordResponse toResponse(MedicalRecord record) {

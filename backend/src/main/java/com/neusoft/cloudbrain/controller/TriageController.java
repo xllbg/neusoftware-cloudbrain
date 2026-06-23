@@ -1,6 +1,6 @@
 package com.neusoft.cloudbrain.controller;
 
-import com.neusoft.cloudbrain.dto.Result;
+import com.neusoft.cloudbrain.dto.CommonResult;
 import com.neusoft.cloudbrain.dto.TriageRequest;
 import com.neusoft.cloudbrain.dto.TriageResponse;
 import com.neusoft.cloudbrain.service.TriageService;
@@ -23,8 +23,8 @@ public class TriageController {
 
     @PostMapping("/consult")
     @Operation(summary = "AI智能分诊", description = "根据患者症状智能推荐科室和医生")
-    public Result<TriageResponse> consult(@Valid @RequestBody TriageRequest request) {
+    public CommonResult<TriageResponse> consult(@Valid @RequestBody TriageRequest request) {
         TriageResponse response = triageService.triage(request);
-        return Result.success(response);
+        return CommonResult.success(response);
     }
 }
