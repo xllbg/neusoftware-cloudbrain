@@ -8,6 +8,7 @@ import com.neusoft.cloudbrain.exception.BusinessException;
 import com.neusoft.cloudbrain.repository.PatientRepository;
 import com.neusoft.cloudbrain.util.JwtUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +18,7 @@ public class PatientService {
 
     private final PatientRepository patientRepository;
     private final JwtUtils jwtUtils;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     public LoginResponse register(PatientRegisterRequest request) {
@@ -26,7 +28,7 @@ public class PatientService {
 
         Patient patient = new Patient();
         patient.setUsername(request.getUsername());
-        patient.setPassword(request.getPassword());
+        patient.setPassword(passwordEncoder.encode(request.getPassword()));
         patient.setName(request.getName());
         patient.setGender(request.getGender());
         patient.setAge(request.getAge());
@@ -51,7 +53,7 @@ public class PatientService {
         Patient patient = patientRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new BusinessException("用户名或密码错误"));
 
-        if (!patient.getPassword().equals(request.getPassword())) {
+        if (!passwordEncoder.matches(request.getPassword(), patient.getPassword())) {
             throw new BusinessException("用户名或密码错误");
         }
 
