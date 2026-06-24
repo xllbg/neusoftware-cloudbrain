@@ -59,6 +59,37 @@ public class DecryptFilter {
 
                     HttpServletRequest wrapped = new HttpServletRequestWrapper(httpReq) {
                         @Override
+                        public String getContentType() {
+                            return "application/json";
+                        }
+
+                        @Override
+                        public int getContentLength() {
+                            return decryptedJson.getBytes(StandardCharsets.UTF_8).length;
+                        }
+
+                        @Override
+                        public long getContentLengthLong() {
+                            return decryptedJson.getBytes(StandardCharsets.UTF_8).length;
+                        }
+
+                        @Override
+                        public String getHeader(String name) {
+                            if ("Content-Type".equalsIgnoreCase(name)) {
+                                return "application/json";
+                            }
+                            return super.getHeader(name);
+                        }
+
+                        @Override
+                        public java.util.Enumeration<String> getHeaders(String name) {
+                            if ("Content-Type".equalsIgnoreCase(name)) {
+                                return java.util.Collections.enumeration(java.util.List.of("application/json"));
+                            }
+                            return super.getHeaders(name);
+                        }
+
+                        @Override
                         public ServletInputStream getInputStream() {
                             return new ServletInputStream() {
                                 private final ByteArrayInputStream stream = decryptedStream;
