@@ -28,6 +28,12 @@
         <el-form-item prop="age">
           <el-input-number v-model="registerForm.age" :min="1" :max="150" style="width:100%" />
         </el-form-item>
+        <el-form-item prop="idCard">
+          <el-input v-model="registerForm.idCard" placeholder="身份证号（可选）" size="large" maxlength="18" />
+        </el-form-item>
+        <el-form-item prop="address">
+          <el-input v-model="registerForm.address" placeholder="地址（可选）" size="large" />
+        </el-form-item>
         <el-form-item>
           <el-button type="primary" size="large" class="register-btn" :loading="submitting" @click="handleRegister">注 册</el-button>
         </el-form-item>
@@ -52,6 +58,7 @@ const submitting = ref(false)
 
 const registerForm = reactive({
   username: "", password: "", name: "", phone: "", gender: "男", age: 20,
+  idCard: "", address: "",
 })
 
 const rules = {

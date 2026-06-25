@@ -40,11 +40,11 @@
 
       <div v-if="step === 2">
         <h3>选择就诊日期</h3>
-        <el-date-picker v-model="selectedDate" type="date" placeholder="选择日期" value-format="YYYY-MM-DD" />
+        <el-date-picker v-model="selectedDate" type="date" placeholder="选择日期" value-format="YYYY-MM-DD" style="width: 100%;" />
         <h3 style="margin-top: 16px;">选择时间段</h3>
-        <el-radio-group v-model="selectedTimeSlot">
-          <el-radio value="MORNING">上午（08:00 - 12:00）</el-radio>
-          <el-radio value="AFTERNOON">下午（14:00 - 18:00）</el-radio>
+        <el-radio-group v-model="selectedTimeSlot" class="time-slot-group">
+          <el-radio label="MORNING">上午（08:00 - 12:00）</el-radio>
+          <el-radio label="AFTERNOON">下午（14:00 - 18:00）</el-radio>
         </el-radio-group>
         <div class="action-bar">
           <el-button @click="step = 1">上一步</el-button>
@@ -60,6 +60,8 @@
           <el-descriptions-item label="就诊日期">{{ selectedDate }}</el-descriptions-item>
           <el-descriptions-item label="时间段">{{ selectedTimeSlot === "MORNING" ? "上午 08:00-12:00" : "下午 14:00-18:00" }}</el-descriptions-item>
         </el-descriptions>
+        <h3 style="margin-top: 20px;">症状描述（选填）</h3>
+        <el-input v-model="symptom" type="textarea" :rows="3" placeholder="请描述您的症状（选填）" maxlength="200" show-word-limit />
         <div class="action-bar">
           <el-button @click="step = 2">上一步</el-button>
           <el-button type="primary" size="large" :loading="submitting" @click="handleSubmit">确认挂号</el-button>
@@ -71,7 +73,7 @@
 
 <script setup lang="ts">
 import { ref, watch, computed, onMounted } from "vue"
-import { useRouter } from "vue-router"
+import { useRouter, useRoute } from "vue-router"
 import { ElMessage } from "element-plus"
 import { getDoctorsByDepartment } from "@/api/doctor"
 import { useRegistrationStore } from "@/stores/registration"
@@ -79,6 +81,7 @@ import { useUserStore } from "@/stores/user"
 import type { DoctorInfo } from "@/types"
 
 const router = useRouter()
+const route = useRoute()
 const regStore = useRegistrationStore()
 const userStore = useUserStore()
 
@@ -91,6 +94,7 @@ const selectedDepartment = ref("")
 const selectedDoctorId = ref<number | null>(null)
 const selectedDate = ref("")
 const selectedTimeSlot = ref("MORNING")
+const symptom = ref("")
 const submitting = ref(false)
 
 const selectedDoctorName = computed(() => {
@@ -105,6 +109,16 @@ onMounted(async () => {
     allDoctors.value = res.data || []
     const deptSet = new Set(allDoctors.value.map((d) => d.department).filter(Boolean))
     departments.value = Array.from(deptSet) as string[]
+
+    // 处理从智能分诊页传来的推荐数据
+    const query = route.query
+    if (query.department) {
+      selectedDepartment.value = query.department as string
+      step.value = 1
+    }
+    if (query.doctorId) {
+      selectedDoctorId.value = parseInt(query.doctorId as string)
+    }
   } catch {
     departments.value = ["心内科", "呼吸内科", "神经内科", "消化内科", "骨科", "儿科", "内科", "普外科", "急诊科"]
   }
@@ -124,9 +138,10 @@ async function handleSubmit() {
     await regStore.create({
       patientId: userStore.userId,
       doctorId: selectedDoctorId.value!,
+      department: selectedDepartment.value,
       registrationDate: selectedDate.value,
       timeSlot: selectedTimeSlot.value,
-      symptom: "",
+      symptom: symptom.value,
     })
     ElMessage.success("挂号成功！")
     router.push("/patient/my-registrations")
@@ -138,6 +153,7 @@ async function handleSubmit() {
 <style scoped>
 .page-title { font-size: 22px; margin-bottom: 24px; }
 .dept-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.time-slot-group { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
 .action-bar { margin-top: 24px; display: flex; gap: 12px; }
 .doctor-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 16px; }
 .doctor-card { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px; cursor: pointer; transition: all 0.2s; }

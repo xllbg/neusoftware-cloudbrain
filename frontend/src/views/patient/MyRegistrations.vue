@@ -18,7 +18,7 @@
           <el-descriptions-item label="时间段">{{ record.timeSlot === "MORNING" ? "上午" : "下午" }}</el-descriptions-item>
           <el-descriptions-item label="症状">{{ record.symptom || "无" }}</el-descriptions-item>
         </el-descriptions>
-        <div class="record-actions" v-if="record.status === 'PENDING'">
+        <div class="record-actions" v-if="record.status === 'pending'">
           <el-button type="danger" size="small" @click="handleCancel(record.id)">取消挂号</el-button>
         </div>
       </el-card>
@@ -27,32 +27,29 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue"
+import { onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { ElMessage, ElMessageBox } from "element-plus"
 import { useRegistrationStore } from "@/stores/registration"
 import { useUserStore } from "@/stores/user"
 import { getStatusTag, getStatusLabel } from "@/utils/format"
+import { storeToRefs } from "pinia"
 
 const router = useRouter()
 const regStore = useRegistrationStore()
 const userStore = useUserStore()
-const loading = ref(false)
+const { records, loading } = storeToRefs(regStore)
 
 async function loadData() {
   if (!userStore.userId) return
-  loading.value = true
-  try {
-    await regStore.fetchList({ patientId: userStore.userId })
-  } finally {
-    loading.value = false
-  }
+  await regStore.fetchList({ patientId: userStore.userId })
 }
 
 async function handleCancel(id: number) {
+  if (!userStore.userId) return
   try {
     await ElMessageBox.confirm("确定要取消该挂号吗？", "确认", { type: "warning" })
-    await regStore.cancel(id)
+    await regStore.cancel(id, userStore.userId)
     ElMessage.success("已取消")
   } catch {
     // 用户取消对话框

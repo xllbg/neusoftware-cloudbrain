@@ -70,6 +70,7 @@ export interface TriageDoctor {
 export interface RegistrationForm {
   patientId: number
   doctorId: number
+  department: string
   registrationDate: string
   timeSlot: string
   symptom: string
