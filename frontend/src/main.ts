@@ -8,10 +8,12 @@ import * as ElementPlusIconsVue from "@element-plus/icons-vue"
 import App from "./App.vue"
 import router from "./router"
 import "./styles/main.scss"
+import AppLoading from "./components/AppLoading.vue"
+import AppEmpty from "./components/AppEmpty.vue"
 
-// ===== 启动时清理所有项目残留 =====
-localStorage.removeItem("cloud-brain-token")
-localStorage.removeItem("cloud-brain-user")
+// ===== 启动时清理所有项目残留（开发时临时注释，方便测试） =====
+// localStorage.removeItem("cloud-brain-token")
+// localStorage.removeItem("cloud-brain-user")
 
 const app = createApp(App)
 
@@ -25,5 +27,8 @@ app.use(ElementPlus, { locale: undefined })
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
   app.component(key, component)
 }
+
+app.component("AppLoading", AppLoading)
+app.component("AppEmpty", AppEmpty)
 
 app.mount("#app")
