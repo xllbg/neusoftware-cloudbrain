@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -27,15 +28,53 @@ public class TriageService {
         log.info("开始分诊 - 患者ID: {}, 年龄: {}, 性别: {}, 症状: {}",
                 request.getPatientId(), request.getAge(), request.getGender(), request.getSymptoms());
 
-        String recommendedDepartment = aiService.recommendDepartment(
+        // 使用增强版AI分析
+        AiService.TriageAnalysisResult analysis = aiService.analyzeSymptomsForTriage(
                 request.getSymptoms(),
                 request.getAge(),
                 request.getGender()
         );
 
-        log.info("AI 推荐科室: {}", recommendedDepartment);
+        log.info("AI 分析结果: department={}, confidence={}, needFollowUp={}, invalidInput={}",
+                analysis.getDepartment(), analysis.getConfidence(), analysis.getNeedFollowUp(), analysis.getInvalidInput());
 
+        // 如果是无效输入，直接返回追问结果（不查找医生）
+        if (Boolean.TRUE.equals(analysis.getInvalidInput())) {
+            TriageResponse response = TriageResponse.builder()
+                    .department(analysis.getDepartment())
+                    .reasoning(analysis.getReasoning())
+                    .confidence(analysis.getConfidence())
+                    .needFollowUp(true)
+                    .followUpQuestions(analysis.getFollowUpQuestions())
+                    .doctors(Collections.emptyList())
+                    .build();
+            return response;
+        }
+
+        // 如果需要追问，直接返回追问结果（不查找医生）
+        if (Boolean.TRUE.equals(analysis.getNeedFollowUp())) {
+            TriageResponse response = TriageResponse.builder()
+                    .department(analysis.getDepartment())
+                    .reasoning(analysis.getReasoning())
+                    .confidence(analysis.getConfidence())
+                    .needFollowUp(true)
+                    .followUpQuestions(analysis.getFollowUpQuestions())
+                    .doctors(Collections.emptyList())
+                    .build();
+            return response;
+        }
+
+        // 正常情况：查找推荐科室的医生
+        String recommendedDepartment = analysis.getDepartment();
         List<Doctor> doctors = doctorRepository.findByDepartment(recommendedDepartment);
+
+        // 如果推荐的科室没有医生（特别是急诊科），改为推荐内科
+        if (doctors.isEmpty()) {
+            log.warn("科室[{}]没有医生，改为推荐内科", recommendedDepartment);
+            recommendedDepartment = "内科";
+            doctors = doctorRepository.findByDepartment(recommendedDepartment);
+            analysis.setReasoning(analysis.getReasoning() + "（该科室暂无可挂号医生，已为您推荐内科）");
+        }
 
         List<TriageResponse.DoctorSimpleVO> doctorVOS = doctors.stream()
                 .map(doc -> TriageResponse.DoctorSimpleVO.builder()
@@ -54,8 +93,10 @@ public class TriageService {
 
         TriageResponse response = TriageResponse.builder()
                 .department(recommendedDepartment)
-                .reasoning("根据您描述的症状[" + request.getSymptoms() + "]，" +
-                        "推荐就诊" + recommendedDepartment)
+                .reasoning(analysis.getReasoning())
+                .confidence(analysis.getConfidence())
+                .needFollowUp(false)
+                .followUpQuestions(Collections.emptyList())
                 .doctors(doctorVOS)
                 .build();
 

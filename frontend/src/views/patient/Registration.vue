@@ -39,6 +39,11 @@
       </div>
 
       <div v-if="step === 2">
+        <el-alert v-if="selectedDepartment === '急诊科'" type="warning" :closable="false" show-icon style="margin-bottom: 16px;">
+          <template #title>
+            <strong>急诊挂号说明：</strong>急诊患者需先经过预检分诊护士评估病情危重程度，再办理挂号。请如实描述症状。
+          </template>
+        </el-alert>
         <h3>选择就诊日期</h3>
         <el-date-picker v-model="selectedDate" type="date" placeholder="选择日期" value-format="YYYY-MM-DD" style="width: 100%;" />
         <h3 style="margin-top: 16px;">选择时间段</h3>
@@ -47,7 +52,7 @@
           <el-radio label="AFTERNOON">下午（14:00 - 18:00）</el-radio>
         </el-radio-group>
         <div class="action-bar">
-          <el-button @click="step = 1">上一步</el-button>
+          <el-button @click="selectedDepartment === '急诊科' ? step = 0 : step = 1">上一步</el-button>
           <el-button type="primary" size="large" :disabled="!selectedDate || !selectedTimeSlot" @click="step = 3">下一步</el-button>
         </div>
       </div>
@@ -98,6 +103,9 @@ const symptom = ref("")
 const submitting = ref(false)
 
 const selectedDoctorName = computed(() => {
+  if (selectedDepartment.value === "急诊科") {
+    return "（急诊挂号，无需指定医生）"
+  }
   const doc = doctors.value.find((d) => d.id === selectedDoctorId.value)
   return doc ? `${doc.name}（${doc.title}）` : ""
 })
@@ -110,11 +118,21 @@ onMounted(async () => {
     const deptSet = new Set(allDoctors.value.map((d) => d.department).filter(Boolean))
     departments.value = Array.from(deptSet) as string[]
 
+    // 确保急诊科始终在列表中（即使没有急诊科医生也可以挂号）
+    if (!departments.value.includes("急诊科")) {
+      departments.value.push("急诊科")
+    }
+
     // 处理从智能分诊页传来的推荐数据
     const query = route.query
     if (query.department) {
       selectedDepartment.value = query.department as string
-      step.value = 1
+      // 急诊科不需要选医生，直接跳到时间选择
+      if (selectedDepartment.value === "急诊科") {
+        step.value = 2
+      } else {
+        step.value = 1
+      }
     }
     if (query.doctorId) {
       selectedDoctorId.value = parseInt(query.doctorId as string)
@@ -129,15 +147,21 @@ watch(selectedDepartment, (dept) => {
   if (!dept) return
   selectedDoctorId.value = null
   doctors.value = allDoctors.value.filter((d) => d.department === dept)
+  // 急诊科不需要选医生，直接跳到时间选择
+  if (dept === "急诊科") {
+    step.value = 2
+  }
 })
 
 async function handleSubmit() {
   if (!userStore.userId) { ElMessage.warning("请先登录"); return }
   submitting.value = true
   try {
+    // 急诊科挂号不需要选医生，传0作为占位符
+    const doctorId = selectedDepartment.value === "急诊科" ? 0 : selectedDoctorId.value!
     await regStore.create({
       patientId: userStore.userId,
-      doctorId: selectedDoctorId.value!,
+      doctorId: doctorId,
       department: selectedDepartment.value,
       registrationDate: selectedDate.value,
       timeSlot: selectedTimeSlot.value,

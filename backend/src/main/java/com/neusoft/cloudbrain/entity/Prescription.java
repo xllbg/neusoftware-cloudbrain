@@ -37,7 +37,7 @@ public class Prescription {
     @Column(columnDefinition = "TEXT")
     private String dosage;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "usage_info", columnDefinition = "TEXT")
     private String usage;
 
     @Column(length = 20)
