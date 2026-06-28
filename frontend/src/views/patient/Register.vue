@@ -36,6 +36,8 @@
         </el-form-item>
       </el-form>
       <div class="register-footer">
+        <router-link to="/patient/login" class="back-link">← 返回登录</router-link>
+        <span class="split">|</span>
         已有账号？<router-link to="/patient/login">立即登录</router-link>
       </div>
     </div>
@@ -95,8 +97,10 @@ async function handleRegister() {
 .register-brand h2 { font-size: 22px; font-weight: 700; color: #202124; margin-bottom: 6px; }
 .register-brand p { font-size: 14px; color: #5f6368; }
 .register-btn { width: 100%; height: 48px; font-size: 17px; border-radius: 10px; margin-top: 4px; }
-.register-footer { text-align: center; font-size: 14px; color: #5f6368; margin-top: 24px; }
+.register-footer { text-align: center; font-size: 14px; color: #5f6368; margin-top: 24px; display: flex; justify-content: center; align-items: center; gap: 12px; }
 .register-footer a { color: #1a73e8; text-decoration: none; font-weight: 500; }
+.register-footer .back-link { color: #1a73e8; text-decoration: none; font-weight: 500; }
+.register-footer .split { color: #dadce0; }
 .el-radio-group { display: flex; width: 100%; }
 .el-radio-button { flex: 1; }
 </style>
