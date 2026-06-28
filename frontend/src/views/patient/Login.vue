@@ -7,11 +7,11 @@
     </div>
     <div class="login-form-wrap">
       <el-form ref="formRef" :model="loginForm" :rules="rules" label-width="0" @keyup.enter="handleLogin">
-        <el-form-item prop="name">
-          <el-input v-model="loginForm.name" placeholder="姓名" :prefix-icon="User" size="large" />
-        </el-form-item>
         <el-form-item prop="phone">
           <el-input v-model="loginForm.phone" placeholder="手机号" :prefix-icon="Iphone" size="large" />
+        </el-form-item>
+        <el-form-item prop="name">
+          <el-input v-model="loginForm.name" placeholder="姓名" :prefix-icon="User" size="large" />
         </el-form-item>
         <el-form-item prop="password">
           <el-input v-model="loginForm.password" type="password" placeholder="密码" :prefix-icon="Lock" show-password size="large" />
@@ -41,10 +41,15 @@ const userStore = useUserStore()
 const formRef = ref()
 const loading = ref(false)
 
-const loginForm = reactive({ name: "", phone: "", password: "" })
+const loginForm = reactive({
+  phone: "",
+  name: "",
+  password: "",
+})
+
 const rules = {
-  name: [{ required: true, message: "请输入姓名", trigger: "blur" }],
   phone: [{ required: true, message: "请输入手机号", trigger: "blur" }],
+  name: [{ required: true, message: "请输入姓名", trigger: "blur" }],
   password: [{ required: true, message: "请输入密码", trigger: "blur" }],
 }
 
@@ -53,7 +58,7 @@ async function handleLogin() {
   if (!valid) return
   loading.value = true
   try {
-    await userStore.patientLoginByPhone(loginForm)
+    await userStore.patientLoginByPhone({ name: loginForm.name, phone: loginForm.phone, password: loginForm.password })
     ElMessage.success("登录成功")
     router.push("/patient/triage")
   } catch { }
@@ -66,7 +71,7 @@ async function handleLogin() {
   min-height: 100vh; background: #fff; display: flex;
   flex-direction: column; justify-content: center; padding: 24px 28px;
 }
-.login-brand { text-align: center; margin-bottom: 40px; }
+.login-brand { text-align: center; margin-bottom: 32px; }
 .brand-icon {
   width: 64px; height: 64px;
   background: linear-gradient(135deg, #1a73e8, #0d47a1);
@@ -75,7 +80,11 @@ async function handleLogin() {
 }
 .login-brand h2 { font-size: 22px; font-weight: 700; color: #202124; margin-bottom: 6px; }
 .login-brand p { font-size: 14px; color: #5f6368; }
-.login-btn { width: 100%; height: 48px; font-size: 17px; border-radius: 10px; }
+.login-tabs { margin-bottom: 20px; }
+.login-tabs :deep(.el-tabs__nav) { width: 100%; }
+.login-tabs :deep(.el-tabs__item) { width: 50%; text-align: center; font-size: 15px; }
+.login-tabs :deep(.el-tabs__nav-wrap::after) { display: none; }
+.login-btn { width: 100%; height: 48px; font-size: 17px; border-radius: 10px; margin-top: 8px; }
 .login-footer { text-align: center; font-size: 14px; color: #5f6368; margin-top: 24px; }
 .login-footer a { color: #1a73e8; text-decoration: none; font-weight: 500; }
 .sep { margin: 0 8px; color: #ddd; }

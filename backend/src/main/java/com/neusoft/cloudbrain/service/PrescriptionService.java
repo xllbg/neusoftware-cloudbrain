@@ -9,6 +9,8 @@ import com.neusoft.cloudbrain.repository.DoctorRepository;
 import com.neusoft.cloudbrain.repository.PatientRepository;
 import com.neusoft.cloudbrain.repository.PrescriptionCheckRepository;
 import com.neusoft.cloudbrain.repository.PrescriptionRepository;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,10 +31,11 @@ public class PrescriptionService {
     private final PatientRepository patientRepository;
     private final DoctorRepository doctorRepository;
     private final AiService aiService;
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public Prescription createPrescription(Long patientId, Long doctorId, Long registrationId,
-            String medicineList, String dosage, String usage) {
+            String medicineList, String dosage, String usageMethod) {
 
         log.info("创建处方 - 患者ID: {}, 医生ID: {}", patientId, doctorId);
 
@@ -48,7 +51,7 @@ public class PrescriptionService {
         prescription.setRegistrationId(registrationId);
         prescription.setMedicineList(medicineList);
         prescription.setDosage(dosage);
-        prescription.setUsage(usage);
+        prescription.setUsageMethod(usageMethod);
         prescription.setStatus("submitted");
 
         Prescription saved = prescriptionRepository.save(prescription);
@@ -79,6 +82,69 @@ public class PrescriptionService {
         result.put("medicationSuggestions", "");
         result.put("interactionDetection", "");
         result.put("riskHints", "");
+
+        return result;
+    }
+
+    @Transactional
+    public Map<String, Object> checkAndSavePrescription(Long prescriptionId) {
+        log.info("AI审核处方并保存 - 处方ID: {}", prescriptionId);
+
+        Prescription prescription = prescriptionRepository.findById(prescriptionId)
+                .orElseThrow(() -> new BusinessException(404, "处方不存在"));
+
+        Patient patient = patientRepository.findById(prescription.getPatientId()).orElse(null);
+        Doctor doctor = doctorRepository.findById(prescription.getDoctorId()).orElse(null);
+
+        String patientInfo = String.format("年龄: %s, 性别: %s",
+                patient != null ? patient.getAge() : "未知",
+                patient != null ? patient.getGender() : "未知");
+
+        String aiResult = aiService.checkPrescription(prescription.getMedicineList(), patientInfo);
+
+        Map<String, Object> result = parseAiResult(aiResult);
+
+        saveCheckResult(
+                prescriptionId,
+                aiResult,
+                (String) result.getOrDefault("medicationSuggestions", ""),
+                (String) result.getOrDefault("interactionDetection", ""),
+                (String) result.getOrDefault("riskLevel", "medium"),
+                (String) result.getOrDefault("warnings", "")
+        );
+
+        return result;
+    }
+
+    private Map<String, Object> parseAiResult(String aiResult) {
+        Map<String, Object> result = new HashMap<>();
+        result.put("checkResult", aiResult);
+        result.put("riskLevel", "medium");
+        result.put("medicationSuggestions", "");
+        result.put("interactionDetection", "");
+        result.put("riskHints", "");
+
+        if (aiResult == null || aiResult.isBlank()) {
+            return result;
+        }
+
+        try {
+            JsonNode root = objectMapper.readTree(aiResult);
+            if (root.has("riskLevel")) {
+                result.put("riskLevel", root.get("riskLevel").asText());
+            }
+            if (root.has("suggestion")) {
+                result.put("medicationSuggestions", root.get("suggestion").asText());
+            }
+            if (root.has("interactions")) {
+                result.put("interactionDetection", root.get("interactions").asText());
+            }
+            if (root.has("warnings")) {
+                result.put("riskHints", root.get("warnings").asText());
+            }
+        } catch (Exception e) {
+            log.warn("解析AI审核结果失败: {}", e.getMessage());
+        }
 
         return result;
     }

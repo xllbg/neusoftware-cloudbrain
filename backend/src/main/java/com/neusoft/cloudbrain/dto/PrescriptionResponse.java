@@ -40,7 +40,7 @@ public class PrescriptionResponse {
     private String dosage;
 
     @Schema(description = "用法说明", example = "饭后服用")
-    private String usage;
+    private String usageMethod;
 
     @Schema(description = "状态", example = "submitted")
     private String status;
