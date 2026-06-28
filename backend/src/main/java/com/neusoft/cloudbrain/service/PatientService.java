@@ -72,6 +72,18 @@ public class PatientService {
                 .build();
     }
 
+    public LoginResponse getPatientInfo(Long patientId) {
+        Patient patient = patientRepository.findById(patientId)
+                .orElseThrow(() -> new BusinessException(404, "患者不存在"));
+
+        return LoginResponse.builder()
+                .userId(patient.getId())
+                .username(patient.getName())
+                .name(patient.getName())
+                .role("PATIENT")
+                .build();
+    }
+
     public LoginResponse loginByPhone(PhoneLoginRequest request) {
         Patient patient = patientRepository.findByPhone(request.getPhone())
                 .orElseThrow(() -> new BusinessException("手机号未注册"));

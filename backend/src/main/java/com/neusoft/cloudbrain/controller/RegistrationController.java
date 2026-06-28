@@ -28,9 +28,18 @@ public class RegistrationController {
     }
 
     @GetMapping("/list")
-    @Operation(summary = "挂号列表", description = "获取患者的挂号记录列表")
-    public CommonResult<List<RegistrationResponse.RegistrationListItem>> list(@RequestParam Long patientId) {
-        List<RegistrationResponse.RegistrationListItem> list = registrationService.getPatientRegistrations(patientId);
+    @Operation(summary = "挂号列表", description = "获取患者或医生的挂号记录列表")
+    public CommonResult<List<RegistrationResponse.RegistrationListItem>> list(
+            @RequestParam(required = false) Long patientId,
+            @RequestParam(required = false) Long doctorId) {
+        List<RegistrationResponse.RegistrationListItem> list;
+        if (patientId != null) {
+            list = registrationService.getPatientRegistrations(patientId);
+        } else if (doctorId != null) {
+            list = registrationService.getDoctorRegistrations(doctorId);
+        } else {
+            return CommonResult.fail(400, "patientId或doctorId至少需要一个");
+        }
         return CommonResult.success(list);
     }
 

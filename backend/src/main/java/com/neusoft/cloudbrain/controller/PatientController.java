@@ -6,9 +6,11 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -35,5 +37,11 @@ public class PatientController {
     @Operation(summary = "患者登录（姓名+手机号+密码）")
     public CommonResult<LoginResponse> loginByPhone(@Valid @RequestBody PhoneLoginRequest request) {
         return CommonResult.success(patientService.loginByPhone(request));
+    }
+
+    @GetMapping("/info")
+    @Operation(summary = "获取患者信息")
+    public CommonResult<LoginResponse> getInfo(@RequestParam Long patientId) {
+        return CommonResult.success(patientService.getPatientInfo(patientId));
     }
 }
