@@ -55,3 +55,7 @@ yarn-error.log*
 
 # 本地文档
 文档/
+
+# Spring Boot 开发环境配置（含敏感信息，请勿提交）
+application-dev.yml
+application-dev.properties
