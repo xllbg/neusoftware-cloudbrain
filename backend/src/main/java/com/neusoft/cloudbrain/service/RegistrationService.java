@@ -76,10 +76,33 @@ public class RegistrationService {
                     Doctor doctor = doctorRepository.findById(reg.getDoctorId()).orElse(null);
                     return RegistrationResponse.RegistrationListItem.builder()
                             .id(reg.getId())
+                            .patientName("")
                             .doctorName(doctor != null ? doctor.getName() : "未知")
                             .department(reg.getDepartment())
                             .doctorTitle(doctor != null ? doctor.getTitle() : "")
                             .hospital(doctor != null ? doctor.getHospital() : "")
+                            .registrationDate(reg.getRegistrationDate())
+                            .timeSlot(reg.getTimeSlot())
+                            .status(reg.getStatus())
+                            .createdAt(reg.getCreatedAt())
+                            .build();
+                })
+                .collect(Collectors.toList());
+    }
+
+    public List<RegistrationResponse.RegistrationListItem> getDoctorRegistrations(Long doctorId) {
+        log.info("查询医生挂号列表 - 医生ID: {}", doctorId);
+
+        List<Registration> registrations = registrationRepository.findByDoctorIdOrderByCreatedAtDesc(doctorId);
+
+        return registrations.stream()
+                .map(reg -> {
+                    Patient patient = patientRepository.findById(reg.getPatientId()).orElse(null);
+                    return RegistrationResponse.RegistrationListItem.builder()
+                            .id(reg.getId())
+                            .patientName(patient != null ? patient.getName() : "未知")
+                            .doctorName("")
+                            .department(reg.getDepartment())
                             .registrationDate(reg.getRegistrationDate())
                             .timeSlot(reg.getTimeSlot())
                             .status(reg.getStatus())

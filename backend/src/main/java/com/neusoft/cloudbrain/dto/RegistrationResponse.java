@@ -55,6 +55,9 @@ public class RegistrationResponse {
         @Schema(description = "挂号ID", example = "1")
         private Long id;
 
+        @Schema(description = "患者姓名", example = "张三")
+        private String patientName;
+
         @Schema(description = "医生姓名", example = "张勇")
         private String doctorName;
 
