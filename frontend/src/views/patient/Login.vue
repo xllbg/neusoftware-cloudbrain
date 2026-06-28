@@ -11,19 +11,12 @@
         <el-tab-pane label="手机号登录" name="phone" />
       </el-tabs>
       <el-form ref="formRef" :model="loginForm" :rules="rules" label-width="0" @keyup.enter="handleLogin">
-        <template v-if="loginType === 'username'">
-          <el-form-item prop="username">
-            <el-input v-model="loginForm.username" placeholder="用户名" :prefix-icon="User" size="large" />
-          </el-form-item>
-        </template>
-        <template v-else>
-          <el-form-item prop="name">
-            <el-input v-model="loginForm.name" placeholder="姓名" :prefix-icon="User" size="large" />
-          </el-form-item>
-          <el-form-item prop="phone">
-            <el-input v-model="loginForm.phone" placeholder="手机号" :prefix-icon="Iphone" size="large" />
-          </el-form-item>
-        </template>
+        <el-form-item prop="phone">
+          <el-input v-model="loginForm.phone" placeholder="手机号" :prefix-icon="Iphone" size="large" />
+        </el-form-item>
+        <el-form-item prop="name">
+          <el-input v-model="loginForm.name" placeholder="姓名" :prefix-icon="User" size="large" />
+        </el-form-item>
         <el-form-item prop="password">
           <el-input v-model="loginForm.password" type="password" placeholder="密码" :prefix-icon="Lock" show-password size="large" />
         </el-form-item>
@@ -54,16 +47,14 @@ const loading = ref(false)
 const loginType = ref("username")
 
 const loginForm = reactive({
-  username: "",
-  name: "",
   phone: "",
+  name: "",
   password: "",
 })
 
 const rules = {
-  username: [{ required: true, message: "请输入用户名", trigger: "blur" }],
-  name: [{ required: true, message: "请输入姓名", trigger: "blur" }],
   phone: [{ required: true, message: "请输入手机号", trigger: "blur" }],
+  name: [{ required: true, message: "请输入姓名", trigger: "blur" }],
   password: [{ required: true, message: "请输入密码", trigger: "blur" }],
 }
 
@@ -72,11 +63,7 @@ async function handleLogin() {
   if (!valid) return
   loading.value = true
   try {
-    if (loginType.value === "username") {
-      await userStore.patientLogin({ username: loginForm.username, password: loginForm.password })
-    } else {
-      await userStore.patientLoginByPhone({ name: loginForm.name, phone: loginForm.phone, password: loginForm.password })
-    }
+    await userStore.patientLoginByPhone({ name: loginForm.name, phone: loginForm.phone, password: loginForm.password })
     ElMessage.success("登录成功")
     router.push("/patient/triage")
   } catch { }

@@ -32,25 +32,9 @@ public class PrescriptionController {
                 request.getRegistrationId(),
                 request.getMedicineList(),
                 request.getDosage(),
-                request.getUsage()
+                request.getUsageMethod()
         );
         return CommonResult.success("处方创建成功", toResponse(prescription));
-    }
-
-    @PostMapping("/check/{id}")
-    @Operation(summary = "AI审核处方", description = "AI审核处方用药安全")
-    public CommonResult<PrescriptionResponse.AiCheckResult> check(@PathVariable Long id) {
-        Map<String, Object> result = prescriptionService.checkPrescriptionByAi(id);
-
-        PrescriptionResponse.AiCheckResult aiResult = PrescriptionResponse.AiCheckResult.builder()
-                .checkResult((String) result.get("checkResult"))
-                .riskLevel((String) result.getOrDefault("riskLevel", "medium"))
-                .medicationSuggestions((String) result.get("medicationSuggestions"))
-                .interactionDetection((String) result.get("interactionDetection"))
-                .riskHints((String) result.get("riskHints"))
-                .build();
-
-        return CommonResult.success(aiResult);
     }
 
     @GetMapping("/list")
@@ -70,6 +54,32 @@ public class PrescriptionController {
         return CommonResult.success(toResponse(prescription));
     }
 
+    @GetMapping("/doctor/list")
+    @Operation(summary = "医生处方列表", description = "获取医生开具的处方列表")
+    public CommonResult<List<PrescriptionResponse>> doctorList(@RequestParam Long doctorId) {
+        List<Prescription> prescriptions = prescriptionService.getDoctorPrescriptions(doctorId);
+        List<PrescriptionResponse> responses = prescriptions.stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+        return CommonResult.success(responses);
+    }
+
+    @PostMapping("/check/{id}")
+    @Operation(summary = "AI审核处方并保存", description = "AI审核处方用药安全并保存审核结果")
+    public CommonResult<PrescriptionResponse.AiCheckResult> checkAndSave(@PathVariable Long id) {
+        Map<String, Object> result = prescriptionService.checkAndSavePrescription(id);
+
+        PrescriptionResponse.AiCheckResult aiResult = PrescriptionResponse.AiCheckResult.builder()
+                .checkResult((String) result.get("checkResult"))
+                .riskLevel((String) result.getOrDefault("riskLevel", "medium"))
+                .medicationSuggestions((String) result.get("medicationSuggestions"))
+                .interactionDetection((String) result.get("interactionDetection"))
+                .riskHints((String) result.get("riskHints"))
+                .build();
+
+        return CommonResult.success(aiResult);
+    }
+
     private PrescriptionResponse toResponse(Prescription prescription) {
         return PrescriptionResponse.builder()
                 .id(prescription.getId())
@@ -78,7 +88,7 @@ public class PrescriptionController {
                 .registrationId(prescription.getRegistrationId())
                 .medicineList(prescription.getMedicineList())
                 .dosage(prescription.getDosage())
-                .usage(prescription.getUsage())
+                .usageMethod(prescription.getUsageMethod())
                 .status(prescription.getStatus())
                 .createdAt(prescription.getCreatedAt())
                 .build();

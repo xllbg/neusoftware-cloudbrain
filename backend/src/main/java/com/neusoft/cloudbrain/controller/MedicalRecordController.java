@@ -1,5 +1,6 @@
 package com.neusoft.cloudbrain.controller;
 
+import com.neusoft.cloudbrain.dto.AiMedicalRecordGenerateRequest;
 import com.neusoft.cloudbrain.dto.CommonResult;
 import com.neusoft.cloudbrain.dto.MedicalRecordRequest;
 import com.neusoft.cloudbrain.dto.MedicalRecordResponse;
@@ -24,11 +25,11 @@ public class MedicalRecordController {
     private final MedicalRecordService medicalRecordService;
 
     @PostMapping("/generate")
-    @Operation(summary = "AI生成病历", description = "根据对话文本AI生成结构化病历")
+    @Operation(summary = "AI生成病历", description = "根据主诉、现病史、既往史AI生成结构化病历")
     public CommonResult<MedicalRecordResponse.AiMedicalRecordResult> generate(
             @RequestParam Long patientId,
-            @RequestBody Map<String, String> request) {
-        String dialogueText = request.get("dialogueText");
+            @RequestBody AiMedicalRecordGenerateRequest request) {
+        String dialogueText = buildDialogueText(request);
         Map<String, Object> result = medicalRecordService.generateMedicalRecordByAi(patientId, dialogueText);
 
         MedicalRecordResponse.AiMedicalRecordResult aiResult = MedicalRecordResponse.AiMedicalRecordResult.builder()
@@ -41,6 +42,20 @@ public class MedicalRecordController {
                 .build();
 
         return CommonResult.success(aiResult);
+    }
+
+    private String buildDialogueText(AiMedicalRecordGenerateRequest request) {
+        StringBuilder sb = new StringBuilder();
+        if (request.getChiefComplaint() != null && !request.getChiefComplaint().isBlank()) {
+            sb.append("主诉: ").append(request.getChiefComplaint()).append("\n");
+        }
+        if (request.getPresentIllness() != null && !request.getPresentIllness().isBlank()) {
+            sb.append("现病史: ").append(request.getPresentIllness()).append("\n");
+        }
+        if (request.getPastHistory() != null && !request.getPastHistory().isBlank()) {
+            sb.append("既往史: ").append(request.getPastHistory()).append("\n");
+        }
+        return sb.toString();
     }
 
     @PostMapping("/save")

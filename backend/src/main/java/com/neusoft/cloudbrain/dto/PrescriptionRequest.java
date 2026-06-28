@@ -32,5 +32,5 @@ public class PrescriptionRequest {
     private String dosage;
 
     @Schema(description = "用法说明", example = "饭后服用")
-    private String usage;
+    private String usageMethod;
 }

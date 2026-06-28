@@ -1,5 +1,7 @@
 package com.neusoft.cloudbrain.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.neusoft.cloudbrain.entity.Doctor;
 import com.neusoft.cloudbrain.entity.MedicalRecord;
 import com.neusoft.cloudbrain.entity.Patient;
@@ -26,6 +28,7 @@ public class MedicalRecordService {
     private final PatientRepository patientRepository;
     private final DoctorRepository doctorRepository;
     private final AiService aiService;
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public MedicalRecord createMedicalRecord(Long patientId, Long doctorId, Long registrationId,
@@ -83,11 +86,16 @@ public class MedicalRecordService {
 
     private Map<String, Object> parseAiMedicalRecordResult(String aiResult) {
         Map<String, Object> result = new HashMap<>();
-        result.put("presentIllness", "");
-        result.put("pastHistory", "");
-        result.put("physicalExamination", "");
-        result.put("diagnosis", "");
-        result.put("treatmentPlan", "");
+        try {
+            JsonNode node = objectMapper.readTree(aiResult);
+            result.put("presentIllness", getTextOrEmpty(node, "presentIllness"));
+            result.put("pastHistory", getTextOrEmpty(node, "pastHistory"));
+            result.put("physicalExamination", getTextOrEmpty(node, "physicalExamination"));
+            result.put("diagnosis", getTextOrEmpty(node, "diagnosis"));
+            result.put("treatmentPlan", getTextOrEmpty(node, "treatmentPlan"));
+        } catch (Exception e) {
+            log.error("解析AI病历结果失败: {}", e.getMessage());
+        }
         result.put("aiRawResult", aiResult);
 
         if (aiResult == null || aiResult.isBlank()) {
@@ -117,5 +125,9 @@ public class MedicalRecordService {
         }
 
         return result;
+    }
+
+    private String getTextOrEmpty(JsonNode node, String field) {
+        return node.has(field) ? node.get(field).asText() : "";
     }
 }

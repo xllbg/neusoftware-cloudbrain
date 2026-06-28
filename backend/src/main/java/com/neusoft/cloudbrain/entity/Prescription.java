@@ -37,8 +37,13 @@ public class Prescription {
     @Column(columnDefinition = "TEXT")
     private String dosage;
 
+<<<<<<< HEAD
     @Column(name = "usage_info", columnDefinition = "TEXT")
     private String usage;
+=======
+    @Column(name = "usage_method", columnDefinition = "TEXT")
+    private String usageMethod;
+>>>>>>> main
 
     @Column(length = 20)
     private String status = "draft";

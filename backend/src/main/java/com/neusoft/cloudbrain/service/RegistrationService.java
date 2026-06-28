@@ -49,7 +49,7 @@ public class RegistrationService {
         Registration registration = new Registration();
         registration.setPatientId(request.getPatientId());
         registration.setDoctorId(request.getDoctorId());
-        registration.setDepartment(request.getDepartment());
+        registration.setDepartment(doctor.getDepartment());
         registration.setRegistrationDate(request.getRegistrationDate());
         registration.setTimeSlot(request.getTimeSlot());
         registration.setStatus("pending");
