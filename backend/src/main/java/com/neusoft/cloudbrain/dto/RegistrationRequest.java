@@ -21,8 +21,8 @@ public class RegistrationRequest {
     private Long patientId;
 
     @NotNull(message = "医生ID不能为空")
-    @Positive(message = "医生ID必须为正数")
-    @Schema(description = "医生ID", example = "3")
+    @jakarta.validation.constraints.Min(value = 0, message = "医生ID必须为非负数")
+    @Schema(description = "医生ID，急诊科传0", example = "3")
     private Long doctorId;
 
     @NotNull(message = "挂号日期不能为空")

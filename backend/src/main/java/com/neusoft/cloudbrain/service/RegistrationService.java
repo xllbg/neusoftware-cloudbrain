@@ -36,9 +36,14 @@ public class RegistrationService {
         Patient patient = patientRepository.findById(request.getPatientId())
                 .orElseThrow(() -> new BusinessException(404, "患者不存在"));
 
-        // 校验医生存在
-        Doctor doctor = doctorRepository.findById(request.getDoctorId())
-                .orElseThrow(() -> new BusinessException(404, "医生不存在"));
+        // 校验医生存在（急诊科doctorId=0时跳过）
+        Doctor doctor = null;
+        String doctorName = "急诊科（待分配）";
+        if (request.getDoctorId() != null && request.getDoctorId() > 0) {
+            doctor = doctorRepository.findById(request.getDoctorId())
+                    .orElseThrow(() -> new BusinessException(404, "医生不存在"));
+            doctorName = doctor.getName();
+        }
 
         // 创建挂号记录
         Registration registration = new Registration();
@@ -57,7 +62,7 @@ public class RegistrationService {
                 .patientId(saved.getPatientId())
                 .patientName(patient.getName())
                 .doctorId(saved.getDoctorId())
-                .doctorName(doctor.getName())
+                .doctorName(doctorName)
                 .department(saved.getDepartment())
                 .registrationDate(saved.getRegistrationDate())
                 .timeSlot(saved.getTimeSlot())
@@ -73,14 +78,20 @@ public class RegistrationService {
 
         return registrations.stream()
                 .map(reg -> {
-                    Doctor doctor = doctorRepository.findById(reg.getDoctorId()).orElse(null);
+                    Doctor doctor = null;
+                    if (reg.getDoctorId() != null && reg.getDoctorId() > 0) {
+                        doctor = doctorRepository.findById(reg.getDoctorId()).orElse(null);
+                    }
+                    String doctorName = (doctor != null) ? doctor.getName() : "急诊科（待分配）";
+                    String doctorTitle = (doctor != null) ? doctor.getTitle() : "";
+                    String hospital = (doctor != null) ? doctor.getHospital() : "";
                     return RegistrationResponse.RegistrationListItem.builder()
                             .id(reg.getId())
                             .patientName("")
-                            .doctorName(doctor != null ? doctor.getName() : "未知")
+                            .doctorName(doctorName)
                             .department(reg.getDepartment())
-                            .doctorTitle(doctor != null ? doctor.getTitle() : "")
-                            .hospital(doctor != null ? doctor.getHospital() : "")
+                            .doctorTitle(doctorTitle)
+                            .hospital(hospital)
                             .registrationDate(reg.getRegistrationDate())
                             .timeSlot(reg.getTimeSlot())
                             .status(reg.getStatus())

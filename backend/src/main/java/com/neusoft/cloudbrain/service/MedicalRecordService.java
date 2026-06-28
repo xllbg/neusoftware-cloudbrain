@@ -97,6 +97,33 @@ public class MedicalRecordService {
             log.error("解析AI病历结果失败: {}", e.getMessage());
         }
         result.put("aiRawResult", aiResult);
+
+        if (aiResult == null || aiResult.isBlank()) {
+            return result;
+        }
+
+        try {
+            com.fasterxml.jackson.databind.JsonNode root = new com.fasterxml.jackson.databind.ObjectMapper().readTree(aiResult);
+            if (root.has("presentIllness")) {
+                result.put("presentIllness", root.path("presentIllness").asText(""));
+            }
+            if (root.has("pastHistory")) {
+                result.put("pastHistory", root.path("pastHistory").asText(""));
+            }
+            if (root.has("physicalExamination")) {
+                result.put("physicalExamination", root.path("physicalExamination").asText(""));
+            }
+            if (root.has("diagnosis")) {
+                result.put("diagnosis", root.path("diagnosis").asText(""));
+            }
+            if (root.has("treatmentPlan")) {
+                result.put("treatmentPlan", root.path("treatmentPlan").asText(""));
+            }
+            log.info("AI病历解析成功");
+        } catch (Exception e) {
+            log.warn("解析AI病历结果失败: {}", e.getMessage());
+        }
+
         return result;
     }
 
