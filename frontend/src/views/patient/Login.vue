@@ -6,6 +6,10 @@
       <p>登录智慧云脑诊疗平台</p>
     </div>
     <div class="login-form-wrap">
+      <el-tabs v-model="loginType" class="login-tabs">
+        <el-tab-pane label="用户名登录" name="username" />
+        <el-tab-pane label="手机号登录" name="phone" />
+      </el-tabs>
       <el-form ref="formRef" :model="loginForm" :rules="rules" label-width="0" @keyup.enter="handleLogin">
         <el-form-item prop="phone">
           <el-input v-model="loginForm.phone" placeholder="手机号" :prefix-icon="Iphone" size="large" />
@@ -40,6 +44,7 @@ const router = useRouter()
 const userStore = useUserStore()
 const formRef = ref()
 const loading = ref(false)
+const loginType = ref("username")
 
 const loginForm = reactive({
   phone: "",

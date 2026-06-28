@@ -104,11 +104,12 @@ async function handleTriage() {
 
   loading.value = true
   try {
+    const userInfo = userStore.userInfo
     const res = await callAIService(
       () => triageConsult({
         patientId: userStore.userId,
-        age: 30,
-        gender: "男",
+        age: userInfo?.age || 30,
+        gender: userInfo?.gender || "男",
         symptoms: symptoms.value
       }),
       { loadingText: "AI 正在分析症状...", fallbackMessage: "AI 分诊服务暂时不可用" }
@@ -118,7 +119,21 @@ async function handleTriage() {
   } finally { loading.value = false }
 }
 
-function goToRegistration() { router.push("/patient/registration") }
+function goToRegistration() {
+  if (result.value) {
+    const firstDoctor = result.value.doctors?.[0]
+    router.push({
+      path: "/patient/registration",
+      query: {
+        department: result.value.department,
+        doctorId: firstDoctor?.id?.toString() || "",
+        doctorName: firstDoctor?.name || "",
+      }
+    })
+  } else {
+    router.push("/patient/registration")
+  }
+}
 function reset() { symptoms.value = ""; result.value = null; fallbackMode.value = false }
 </script>
 
