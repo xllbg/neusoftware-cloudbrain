@@ -28,6 +28,7 @@ public class PatientService {
         }
 
         Patient patient = new Patient();
+        patient.setUsername(request.getPhone());
         patient.setName(request.getName());
         patient.setPassword(passwordEncoder.encode(request.getPassword()));
         patient.setPhone(request.getPhone());
