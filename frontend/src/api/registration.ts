@@ -10,6 +10,6 @@ export function getRegistrationList(params: any) {
   return get<RegistrationRecord[]>("/registration/list", params)
 }
 
-export function cancelRegistration(id: number) {
-  return post<RegistrationRecord>(`/registration/cancel/${id}`)
+export function cancelRegistration(id: number, patientId: number) {
+  return post<RegistrationRecord>(`/registration/cancel/${id}?patientId=${patientId}`)
 }

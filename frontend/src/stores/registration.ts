@@ -24,8 +24,8 @@ export const useRegistrationStore = defineStore("registration", () => {
     return res.data
   }
 
-  async function cancel(id: number) {
-    const res = await cancelRegistration(id)
+  async function cancel(id: number, patientId: number) {
+    const res = await cancelRegistration(id, patientId)
     const idx = records.value.findIndex((r) => r.id === id)
     if (idx !== -1) {
       records.value[idx] = res.data

@@ -45,6 +45,9 @@ public class DoctorVO {
     private String introduction;
     private String status;
 
+    @Schema(description = "审核状态", example = "APPROVED")
+    private String status;
+
     public static DoctorVO fromEntity(Doctor doctor) {
         return DoctorVO.builder()
                 .id(doctor.getId())

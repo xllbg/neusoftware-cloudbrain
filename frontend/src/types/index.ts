@@ -56,6 +56,9 @@ export interface TriageResult {
   department: string
   reasoning: string
   doctors: TriageDoctor[]
+  confidence?: number        // 置信度 0-100
+  needFollowUp?: boolean    // 是否需要追问
+  followUpQuestions?: string[]  // 追问问题列表
 }
 
 export interface TriageDoctor {
@@ -70,6 +73,7 @@ export interface TriageDoctor {
 export interface RegistrationForm {
   patientId: number
   doctorId: number
+  department: string
   registrationDate: string
   timeSlot: string
   symptom: string

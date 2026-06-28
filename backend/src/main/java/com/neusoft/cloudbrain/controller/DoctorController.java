@@ -21,7 +21,7 @@ public class DoctorController {
     private final DoctorService doctorService;
 
     @GetMapping("/list")
-    @Operation(summary = "医生列表")
+    @Operation(summary = "医生列表（仅已批准）")
     public CommonResult<List<DoctorVO>> list(
             @Parameter(description = "科室名称") @RequestParam(required = false) String department) {
         return CommonResult.success(doctorService.listDoctors(department));
@@ -34,9 +34,15 @@ public class DoctorController {
     }
 
     @PostMapping("/login")
-    @Operation(summary = "医生登录（姓名+手机号+密码）")
+    @Operation(summary = "医生登录（用户名+密码）")
     public CommonResult<LoginResponse> login(@Valid @RequestBody DoctorLoginRequest request) {
         return CommonResult.success(doctorService.login(request));
+    }
+
+    @PostMapping("/login/phone")
+    @Operation(summary = "医生登录（姓名+手机号+密码）")
+    public CommonResult<LoginResponse> loginByPhone(@Valid @RequestBody PhoneLoginRequest request) {
+        return CommonResult.success(doctorService.loginByPhone(request));
     }
 
     @PostMapping("/register")

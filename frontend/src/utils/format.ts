@@ -20,22 +20,22 @@ export function formatDateTime(dateStr: string): string {
 
 export function getStatusTag(status: string): string {
   const map: Record<string, string> = {
-    PENDING: "warning",
-    COMPLETED: "success",
-    CANCELLED: "info",
-    APPROVED: "success",
-    REJECTED: "danger",
+    pending: "warning",
+    completed: "success",
+    cancelled: "info",
+    approved: "success",
+    rejected: "danger",
   }
-  return map[status] || "info"
+  return map[status?.toLowerCase()] || "info"
 }
 
 export function getStatusLabel(status: string): string {
   const map: Record<string, string> = {
-    PENDING: "待处理",
-    COMPLETED: "已完成",
-    CANCELLED: "已取消",
-    APPROVED: "已通过",
-    REJECTED: "已拒绝",
+    pending: "待处理",
+    completed: "已完成",
+    cancelled: "已取消",
+    approved: "已通过",
+    rejected: "已拒绝",
   }
-  return map[status] || status
+  return map[status?.toLowerCase()] || status
 }
