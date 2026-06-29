@@ -92,7 +92,7 @@
               </el-button>
               <template #dropdown>
                 <el-dropdown-menu>
-                  <el-dropdown-item @click="viewDialogue(row)">对话记录</el-dropdown-item>
+                  <el-dropdown-item @click="viewConsultation(row)">问诊记录</el-dropdown-item>
                   <el-dropdown-item @click="viewMedicalRecord(row)">病历</el-dropdown-item>
                   <el-dropdown-item @click="viewPrescription(row)">处方</el-dropdown-item>
                 </el-dropdown-menu>
@@ -103,7 +103,7 @@
               type="info"
               size="small"
               style="margin-left: 4px"
-              @click="viewDialogue(row)"
+              @click="viewConsultation(row)"
             >
               回看
             </el-button>
@@ -353,7 +353,7 @@ function goToConsultation(row: RegistrationRecord) {
   router.push(`/doctor/consultation/${row.id}`)
 }
 
-function viewDialogue(row: RegistrationRecord) {
+function viewConsultation(row: RegistrationRecord) {
   router.push(`/doctor/consultation/${row.id}`)
 }
 

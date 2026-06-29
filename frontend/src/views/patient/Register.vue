@@ -7,11 +7,14 @@
       </div>
       <el-form ref="formRef" :model="registerForm" :rules="rules" label-width="90px" size="large">
         <el-divider content-position="left">账户信息</el-divider>
+        <el-form-item label="用户名" prop="username">
+          <el-input v-model="registerForm.username" placeholder="用于登录的账号" />
+        </el-form-item>
         <el-form-item label="姓名" prop="name">
           <el-input v-model="registerForm.name" placeholder="请输入真实姓名" />
         </el-form-item>
         <el-form-item label="手机号" prop="phone">
-          <el-input v-model="registerForm.phone" placeholder="请输入手机号" />
+          <el-input v-model="registerForm.phone" placeholder="请输入手机号" maxlength="11" />
         </el-form-item>
         <el-form-item label="密码" prop="password">
           <el-input v-model="registerForm.password" type="password" placeholder="请设置密码" show-password />
@@ -77,14 +80,40 @@ const validatePass = (_rule: any, value: string, callback: any) => {
   }
 }
 
+const validatePhone = (_rule: any, value: string, callback: any) => {
+  if (!value) {
+    callback(new Error("请输入手机号"))
+  } else if (!/^1\d{10}$/.test(value)) {
+    callback(new Error("手机号格式不正确（11位数字）"))
+  } else {
+    callback()
+  }
+}
+
+const validateIdCard = (_rule: any, value: string, callback: any) => {
+  if (value && value.length !== 18) {
+    callback(new Error("身份证号应为18位"))
+  } else {
+    callback()
+  }
+}
+
 const registerForm = reactive({
+  username: "",
   name: "", phone: "", password: "", confirmPassword: "", gender: "男", age: 20,
   idCard: "", address: "",
 })
 
 const rules = {
+  username: [
+    { required: true, message: "请输入用户名", trigger: "blur" },
+    { min: 3, max: 20, message: "用户名长度3-20位", trigger: "blur" },
+  ],
   name: [{ required: true, message: "请输入姓名", trigger: "blur" }],
-  phone: [{ required: true, message: "请输入手机号", trigger: "blur" }],
+  phone: [
+    { required: true, message: "请输入手机号", trigger: "blur" },
+    { validator: validatePhone, trigger: "blur" },
+  ],
   password: [{ required: true, message: "请设置密码", trigger: "blur" }],
   confirmPassword: [
     { required: true, message: "请确认密码", trigger: "blur" },
@@ -92,6 +121,9 @@ const rules = {
   ],
   gender: [{ required: true, message: "请选择性别", trigger: "change" }],
   age: [{ required: true, message: "请输入年龄", trigger: "blur" }],
+  idCard: [
+    { validator: validateIdCard, trigger: "blur" },
+  ],
 }
 
 async function handleRegister() {

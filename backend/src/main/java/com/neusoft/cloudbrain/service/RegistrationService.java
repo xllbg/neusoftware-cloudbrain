@@ -111,7 +111,13 @@ public class RegistrationService {
                 })
                 .filter(reg -> {
                     if (date != null && !date.isEmpty()) {
-                        return date.equals(reg.getRegistrationDate());
+                        try {
+                            java.time.LocalDate filterDate = java.time.LocalDate.parse(date);
+                            return filterDate.equals(reg.getRegistrationDate());
+                        } catch (Exception e) {
+                            log.warn("日期解析失败: {}", date);
+                            return false;
+                        }
                     }
                     return true;
                 })

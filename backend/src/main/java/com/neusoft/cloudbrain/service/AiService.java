@@ -150,15 +150,15 @@ public class AiService {
                 age, gender, symptoms
         );
 
-        log.debug("发送AI请求，prompt长度: {}", prompt.length());
+        log.info("发送AI请求，prompt长度: {}", prompt.length());
         String response = callDeepSeekApi(prompt);
-        log.debug("AI原始响应: {}", response);
+        log.info("AI原始响应: {}", response);
         return parseDepartmentFromResponse(response);
     }
 
     private String callDeepSeekApi(String prompt) {
         String url = baseUrl + "/chat/completions";
-        log.debug("DeepSeek API URL: {}", url);
+        log.info("DeepSeek API URL: {}", url);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -167,10 +167,10 @@ public class AiService {
         Map<String, Object> body = new HashMap<>();
         body.put("model", model);
         body.put("messages", List.of(Map.of("role", "user", "content", prompt)));
-        body.put("max_tokens", 20);
+        body.put("max_tokens", 1000);
         body.put("temperature", 0.1);
 
-        log.debug("请求体: model={}, max_tokens=20, temperature=0.1", model);
+        log.info("请求体: model={}, max_tokens=1000, temperature=0.1", model);
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
 
@@ -372,11 +372,15 @@ public class AiService {
                 "科室：%s\n" +
                 "症状：%s\n" +
                 "初步诊断：%s\n\n" +
+                "请根据患者的实际症状和诊断，综合考虑用药的：\n" +
+                "1. 有效性 - 对症下药\n" +
+                "2. 安全性 - 考虑患者年龄、体质、过敏史\n" +
+                "3. 合理性 - 不重复用药，避免药物相互作用\n\n" +
                 "请以JSON数组格式返回推荐的药品列表，每个药品包含以下字段：\n" +
                 "name: 药品名称\n" +
                 "dose: 剂量（如：2片/次）\n" +
                 "frequency: 用法频次（如：每日3次，饭后服用）\n\n" +
-                "只返回JSON数组，不要其他文字。最多推荐5种常用药品。",
+                "只返回JSON数组，不要其他文字。药品数量根据实际需要，不做限制。",
                 department, symptoms, diagnosis
         );
 
@@ -418,5 +422,12 @@ public class AiService {
             log.warn("解析AI响应失败: {}", e.getMessage());
             return jsonResponse;
         }
+    }
+
+    /**
+     * 公开方法：调用DeepSeek API（用于问诊记录AI推荐）
+     */
+    public String callDeepSeekApiForConsultation(String prompt) {
+        return callDeepSeekApi(prompt);
     }
 }

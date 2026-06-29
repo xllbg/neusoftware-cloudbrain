@@ -1,5 +1,7 @@
 package com.neusoft.cloudbrain.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.neusoft.cloudbrain.entity.Doctor;
 import com.neusoft.cloudbrain.entity.MedicalRecord;
 import com.neusoft.cloudbrain.entity.Patient;
@@ -26,6 +28,7 @@ public class MedicalRecordService {
     private final PatientRepository patientRepository;
     private final DoctorRepository doctorRepository;
     private final AiService aiService;
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public MedicalRecord createMedicalRecord(Long patientId, Long doctorId, Long registrationId,
@@ -89,6 +92,49 @@ public class MedicalRecordService {
         result.put("diagnosis", "");
         result.put("treatmentPlan", "");
         result.put("aiRawResult", aiResult);
+
+        if (aiResult == null || aiResult.isBlank()) {
+            log.warn("AI返回结果为空");
+            return result;
+        }
+
+        try {
+            String jsonStr = aiResult.trim();
+            if (jsonStr.startsWith("```json")) {
+                jsonStr = jsonStr.substring(7);
+            }
+            if (jsonStr.startsWith("```")) {
+                jsonStr = jsonStr.substring(3);
+            }
+            if (jsonStr.endsWith("```")) {
+                jsonStr = jsonStr.substring(0, jsonStr.length() - 3);
+            }
+            jsonStr = jsonStr.trim();
+
+            JsonNode root = objectMapper.readTree(jsonStr);
+
+            if (root.has("presentIllness")) {
+                result.put("presentIllness", root.path("presentIllness").asText(""));
+            }
+            if (root.has("pastHistory")) {
+                result.put("pastHistory", root.path("pastHistory").asText(""));
+            }
+            if (root.has("physicalExamination")) {
+                result.put("physicalExamination", root.path("physicalExamination").asText(""));
+            }
+            if (root.has("diagnosis")) {
+                result.put("diagnosis", root.path("diagnosis").asText(""));
+            }
+            if (root.has("treatmentPlan")) {
+                result.put("treatmentPlan", root.path("treatmentPlan").asText(""));
+            }
+
+            log.info("AI病历解析成功 - 诊断: {}", result.get("diagnosis"));
+        } catch (Exception e) {
+            log.error("解析AI病历结果失败: {}", e.getMessage());
+            log.debug("原始AI结果: {}", aiResult);
+        }
+
         return result;
     }
 }
