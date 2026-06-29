@@ -1,13 +1,25 @@
 import { defineStore } from "pinia"
 import { ref } from "vue"
 import type { RegistrationRecord, RegistrationForm } from "@/types"
-import { createRegistration, getRegistrationList, cancelRegistration } from "@/api/registration"
+import {
+  createRegistration,
+  getRegistrationList,
+  cancelRegistration,
+  startConsultation as apiStartConsultation,
+  completeConsultation as apiCompleteConsultation,
+} from "@/api/registration"
 
 export const useRegistrationStore = defineStore("registration", () => {
   const records = ref<RegistrationRecord[]>([])
   const loading = ref(false)
 
-  async function fetchList(params: { patientId?: number; doctorId?: number; status?: string }) {
+  async function fetchList(params: {
+    patientId?: number
+    doctorId?: number
+    status?: string
+    department?: string
+    date?: string
+  }) {
     loading.value = true
     try {
       const res = await getRegistrationList(params)
@@ -33,5 +45,23 @@ export const useRegistrationStore = defineStore("registration", () => {
     return res.data
   }
 
-  return { records, loading, fetchList, create, cancel }
+  async function startConsultation(id: number, doctorId: number) {
+    const res = await apiStartConsultation(id, doctorId)
+    const idx = records.value.findIndex((r) => r.id === id)
+    if (idx !== -1) {
+      records.value[idx] = res.data
+    }
+    return res.data
+  }
+
+  async function completeConsultation(id: number, doctorId: number) {
+    const res = await apiCompleteConsultation(id, doctorId)
+    const idx = records.value.findIndex((r) => r.id === id)
+    if (idx !== -1) {
+      records.value[idx] = res.data
+    }
+    return res.data
+  }
+
+  return { records, loading, fetchList, create, cancel, startConsultation, completeConsultation }
 })

@@ -92,7 +92,7 @@ CREATE TABLE prescription (
     registration_id BIGINT COMMENT '挂号ID',
     medicine_list TEXT NOT NULL COMMENT '药品列表（JSON格式）',
     dosage TEXT COMMENT '剂量说明',
-    usage_method TEXT COMMENT '用法说明',
+    `usage` TEXT COMMENT '用法说明',
     status VARCHAR(20) DEFAULT 'draft' COMMENT '状态：draft-草稿，submitted-已提交，checked-已审核',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',

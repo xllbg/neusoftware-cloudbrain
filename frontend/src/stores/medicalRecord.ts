@@ -1,7 +1,12 @@
 import { defineStore } from "pinia"
 import { ref } from "vue"
-import type { MedicalRecord, MedicalRecordForm, AIGenerateRecordRequest } from "@/types"
-import { getMedicalRecordList, getMedicalRecordDetail, saveMedicalRecord, generateMedicalRecord } from "@/api/medicalRecord"
+import type { MedicalRecord, MedicalRecordForm, AiMedicalRecordResult } from "@/types"
+import {
+  getMedicalRecordList,
+  getMedicalRecordDetail,
+  saveMedicalRecord,
+  generateMedicalRecord,
+} from "@/api/medicalRecord"
 
 export const useMedicalRecordStore = defineStore("medicalRecord", () => {
   const records = ref<MedicalRecord[]>([])
@@ -12,8 +17,12 @@ export const useMedicalRecordStore = defineStore("medicalRecord", () => {
     loading.value = true
     try {
       const res = await getMedicalRecordList(params)
-      records.value = res.data
-      return res.data
+      const list = (res.data || []).map((item: any) => ({
+        ...item,
+        createTime: item.createTime || item.createdAt,
+      }))
+      records.value = list
+      return list
     } finally {
       loading.value = false
     }
@@ -35,9 +44,9 @@ export const useMedicalRecordStore = defineStore("medicalRecord", () => {
     return res.data
   }
 
-  async function generate(data: AIGenerateRecordRequest) {
-    const res = await generateMedicalRecord(data)
-    return res.data
+  async function generate(patientId: number, dialogueText: string) {
+    const res = await generateMedicalRecord(patientId, dialogueText)
+    return res.data as AiMedicalRecordResult
   }
 
   return { records, currentRecord, loading, fetchList, fetchDetail, save, generate }

@@ -1,4 +1,4 @@
-// ===== 统一响应类型（匹配后端 Result.java）=====
+// ===== 统一响应类型（匹配后端 CommonResult.java）=====
 export interface ApiResult<T = any> {
   code: number
   message: string
@@ -29,6 +29,7 @@ export interface RegisterForm {
   phone: string
   idCard?: string
   address?: string
+  [key: string]: any
 }
 
 export interface DoctorInfo {
@@ -56,9 +57,6 @@ export interface TriageResult {
   department: string
   reasoning: string
   doctors: TriageDoctor[]
-  confidence?: number        // 置信度 0-100
-  needFollowUp?: boolean    // 是否需要追问
-  followUpQuestions?: string[]  // 追问问题列表
 }
 
 export interface TriageDoctor {
@@ -68,45 +66,62 @@ export interface TriageDoctor {
   hospital: string
 }
 
-// ===== 以下模块后端尚未实现，保留类型定义供后续对接 =====
-
+// ===== 挂号（匹配后端 RegistrationResponse）=====
 export interface RegistrationForm {
   patientId: number
   doctorId: number
   department: string
   registrationDate: string
   timeSlot: string
-  symptom: string
+  symptom?: string
 }
 
 export interface RegistrationRecord {
   id: number
   patientId: number
   patientName: string
-  doctorId: number
+  doctorId?: number
   doctorName: string
   department: string
+  doctorTitle: string
+  hospital: string
   registrationDate: string
   timeSlot: string
   status: string
   symptom: string
   triageResult: string
-  createTime: string
+  createdAt: string
 }
 
+// ===== 问诊消息（匹配后端 ConsultationMessageDTO）=====
+export interface ConsultationMessage {
+  id: number
+  registrationId: number
+  patientId: number
+  doctorId: number
+  senderType: string
+  senderId: number
+  senderName: string
+  content: string
+  type: string
+  isRead: boolean
+  createdAt: string
+}
+
+// ===== 处方（匹配后端 PrescriptionRequest / PrescriptionResponse）=====
 export interface PrescriptionForm {
   patientId: number
   doctorId: number
-  diagnosis: string
-  items: PrescriptionItem[]
+  registrationId?: number
+  medicineList: string
+  dosage?: string
+  usage?: string
 }
 
-export interface PrescriptionItem {
-  drugName: string
-  dosage: string
+export interface PrescriptionMedicineItem {
+  name: string
+  dose: string
   frequency: string
-  duration: string
-  note: string
 }
 
 export interface PrescriptionRecord {
@@ -115,28 +130,36 @@ export interface PrescriptionRecord {
   patientName: string
   doctorId: number
   doctorName: string
-  diagnosis: string
-  items: PrescriptionItem[]
+  registrationId?: number
+  medicineList: string
+  dosage?: string
+  usage?: string
+  diagnosis?: string
   status: string
-  aiCheckResult: string
-  createTime: string
+  createdAt: string
+  createTime?: string
+  aiCheckResult?: AiCheckResult
+  items?: any[]
 }
 
-export interface AICheckResult {
-  approved: boolean
+export interface AiCheckResult {
+  checkResult: string
   riskLevel: string
-  suggestions: string[]
-  warnings: string[]
+  medicationSuggestions: string
+  interactionDetection: string
+  riskHints: string
 }
 
+// ===== 病历（匹配后端 MedicalRecordRequest / MedicalRecordResponse）=====
 export interface MedicalRecordForm {
   patientId: number
   doctorId: number
-  diagnosis: string
+  registrationId?: number
   chiefComplaint: string
   presentIllness: string
   pastHistory: string
-  examinationResult: string
+  physicalExamination: string
+  diagnosis: string
   treatmentPlan: string
 }
 
@@ -146,18 +169,30 @@ export interface MedicalRecord {
   patientName: string
   doctorId: number
   doctorName: string
+  registrationId?: number
   chiefComplaint: string
   presentIllness: string
   pastHistory: string
-  examinationResult: string
+  physicalExamination: string
+  examinationResult?: string
   diagnosis: string
   treatmentPlan: string
-  aiGenerated: boolean
-  createTime: string
+  createdAt: string
+  createTime?: string
+  aiGenerated?: boolean
+  aiResult?: AiMedicalRecordResult
 }
 
-export interface AIGenerateRecordRequest {
-  chiefComplaint: string
+export interface AiMedicalRecordResult {
   presentIllness: string
-  pastHistory?: string
+  pastHistory: string
+  physicalExamination: string
+  diagnosis: string
+  treatmentPlan: string
+  aiRawResult: string
+}
+
+export interface AiGenerateRecordRequest {
+  patientId: number
+  dialogueText: string
 }

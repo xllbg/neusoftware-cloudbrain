@@ -24,15 +24,6 @@ public class TriageResponse {
     @Schema(description = "推荐医生列表")
     private List<DoctorSimpleVO> doctors;
 
-    @Schema(description = "置信度 0-100", example = "85")
-    private Integer confidence;
-
-    @Schema(description = "是否需要追问")
-    private Boolean needFollowUp;
-
-    @Schema(description = "追问问题列表")
-    private List<String> followUpQuestions;
-
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
