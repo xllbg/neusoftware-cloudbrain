@@ -114,7 +114,7 @@ async function handleRegister() {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: #fff;
+  background: #f5f7fa;
   padding: 40px 20px;
 }
 .register-card {

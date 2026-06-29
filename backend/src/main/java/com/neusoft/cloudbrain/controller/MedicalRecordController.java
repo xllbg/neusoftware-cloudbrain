@@ -1,13 +1,10 @@
 package com.neusoft.cloudbrain.controller;
 
+import com.neusoft.cloudbrain.dto.AiMedicalRecordGenerateRequest;
 import com.neusoft.cloudbrain.dto.CommonResult;
 import com.neusoft.cloudbrain.dto.MedicalRecordRequest;
 import com.neusoft.cloudbrain.dto.MedicalRecordResponse;
-import com.neusoft.cloudbrain.entity.Doctor;
 import com.neusoft.cloudbrain.entity.MedicalRecord;
-import com.neusoft.cloudbrain.entity.Patient;
-import com.neusoft.cloudbrain.repository.DoctorRepository;
-import com.neusoft.cloudbrain.repository.PatientRepository;
 import com.neusoft.cloudbrain.service.MedicalRecordService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -26,15 +23,13 @@ import java.util.stream.Collectors;
 public class MedicalRecordController {
 
     private final MedicalRecordService medicalRecordService;
-    private final PatientRepository patientRepository;
-    private final DoctorRepository doctorRepository;
 
     @PostMapping("/generate")
-    @Operation(summary = "AI生成病历", description = "根据对话文本AI生成结构化病历")
+    @Operation(summary = "AI生成病历", description = "根据主诉、现病史、既往史AI生成结构化病历")
     public CommonResult<MedicalRecordResponse.AiMedicalRecordResult> generate(
             @RequestParam Long patientId,
-            @RequestBody Map<String, String> request) {
-        String dialogueText = request.get("dialogueText");
+            @RequestBody AiMedicalRecordGenerateRequest request) {
+        String dialogueText = buildDialogueText(request);
         Map<String, Object> result = medicalRecordService.generateMedicalRecordByAi(patientId, dialogueText);
 
         MedicalRecordResponse.AiMedicalRecordResult aiResult = MedicalRecordResponse.AiMedicalRecordResult.builder()
@@ -47,6 +42,20 @@ public class MedicalRecordController {
                 .build();
 
         return CommonResult.success(aiResult);
+    }
+
+    private String buildDialogueText(AiMedicalRecordGenerateRequest request) {
+        StringBuilder sb = new StringBuilder();
+        if (request.getChiefComplaint() != null && !request.getChiefComplaint().isBlank()) {
+            sb.append("主诉: ").append(request.getChiefComplaint()).append("\n");
+        }
+        if (request.getPresentIllness() != null && !request.getPresentIllness().isBlank()) {
+            sb.append("现病史: ").append(request.getPresentIllness()).append("\n");
+        }
+        if (request.getPastHistory() != null && !request.getPastHistory().isBlank()) {
+            sb.append("既往史: ").append(request.getPastHistory()).append("\n");
+        }
+        return sb.toString();
     }
 
     @PostMapping("/save")
@@ -67,18 +76,9 @@ public class MedicalRecordController {
     }
 
     @GetMapping("/list")
-    @Operation(summary = "病历列表", description = "获取患者或医生的病历列表")
-    public CommonResult<List<MedicalRecordResponse>> list(
-            @RequestParam(required = false) Long patientId,
-            @RequestParam(required = false) Long doctorId) {
-        List<MedicalRecord> records;
-        if (doctorId != null) {
-            records = medicalRecordService.getDoctorMedicalRecords(doctorId);
-        } else if (patientId != null) {
-            records = medicalRecordService.getPatientMedicalRecords(patientId);
-        } else {
-            records = List.of();
-        }
+    @Operation(summary = "病历列表", description = "获取患者的病历列表")
+    public CommonResult<List<MedicalRecordResponse>> list(@RequestParam Long patientId) {
+        List<MedicalRecord> records = medicalRecordService.getPatientMedicalRecords(patientId);
         List<MedicalRecordResponse> responses = records.stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
@@ -93,17 +93,10 @@ public class MedicalRecordController {
     }
 
     private MedicalRecordResponse toResponse(MedicalRecord record) {
-        String patientName = patientRepository.findById(record.getPatientId())
-                .map(Patient::getName).orElse("未知患者");
-        String doctorName = doctorRepository.findById(record.getDoctorId())
-                .map(Doctor::getName).orElse("未知医生");
-
         return MedicalRecordResponse.builder()
                 .id(record.getId())
                 .patientId(record.getPatientId())
-                .patientName(patientName)
                 .doctorId(record.getDoctorId())
-                .doctorName(doctorName)
                 .registrationId(record.getRegistrationId())
                 .chiefComplaint(record.getChiefComplaint())
                 .presentIllness(record.getPresentIllness())

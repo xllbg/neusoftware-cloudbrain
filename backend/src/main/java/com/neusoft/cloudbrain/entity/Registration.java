@@ -41,12 +41,6 @@ public class Registration {
     @Column(length = 20)
     private String status = "pending";
 
-    @Column(columnDefinition = "TEXT")
-    private String symptom;
-
-    @Column(name = "triage_result", columnDefinition = "TEXT")
-    private String triageResult;
-
     @CreatedDate
     @Column(updatable = false)
     private LocalDateTime createdAt;

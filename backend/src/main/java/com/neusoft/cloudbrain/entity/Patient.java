@@ -22,8 +22,11 @@ public class Patient {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 50)
+    @Column(unique = true, nullable = false, length = 50)
     private String username;
+
+    @Column(unique = true, nullable = false, length = 20)
+    private String phone;
 
     @Column(nullable = false)
     private String password;
@@ -35,9 +38,6 @@ public class Patient {
     private String gender;
 
     private Integer age;
-
-    @Column(length = 20)
-    private String phone;
 
     @Column(length = 18)
     private String idCard;

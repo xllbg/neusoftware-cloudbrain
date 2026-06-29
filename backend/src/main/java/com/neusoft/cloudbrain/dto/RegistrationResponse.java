@@ -43,9 +43,6 @@ public class RegistrationResponse {
     @Schema(description = "状态", example = "pending")
     private String status;
 
-    @Schema(description = "症状", example = "头痛发烧")
-    private String symptom;
-
     @Schema(description = "创建时间", example = "2026-06-22T10:30:00")
     private LocalDateTime createdAt;
 
@@ -57,9 +54,6 @@ public class RegistrationResponse {
 
         @Schema(description = "挂号ID", example = "1")
         private Long id;
-
-        @Schema(description = "患者ID", example = "1")
-        private Long patientId;
 
         @Schema(description = "患者姓名", example = "张三")
         private String patientName;
@@ -84,12 +78,6 @@ public class RegistrationResponse {
 
         @Schema(description = "状态", example = "pending")
         private String status;
-
-        @Schema(description = "症状", example = "头痛发烧")
-        private String symptom;
-
-        @Schema(description = "分诊结果", example = "建议内科就诊")
-        private String triageResult;
 
         @Schema(description = "创建时间", example = "2026-06-22T10:30:00")
         private LocalDateTime createdAt;
