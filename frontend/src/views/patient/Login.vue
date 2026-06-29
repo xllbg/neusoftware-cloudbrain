@@ -3,27 +3,16 @@
     <div class="login-brand">
       <div class="brand-icon"><el-icon :size="36"><User /></el-icon></div>
       <h2>欢迎回来</h2>
-      <p>登录智慧云脑诊疗平台</p>
+      <p>使用手机号快捷登录</p>
     </div>
     <div class="login-form-wrap">
-      <el-tabs v-model="loginType" class="login-tabs">
-        <el-tab-pane label="用户名登录" name="username" />
-        <el-tab-pane label="手机号登录" name="phone" />
-      </el-tabs>
       <el-form ref="formRef" :model="loginForm" :rules="rules" label-width="0" @keyup.enter="handleLogin">
-        <template v-if="loginType === 'username'">
-          <el-form-item prop="username">
-            <el-input v-model="loginForm.username" placeholder="用户名" :prefix-icon="User" size="large" />
-          </el-form-item>
-        </template>
-        <template v-else>
-          <el-form-item prop="name">
-            <el-input v-model="loginForm.name" placeholder="姓名" :prefix-icon="User" size="large" />
-          </el-form-item>
-          <el-form-item prop="phone">
-            <el-input v-model="loginForm.phone" placeholder="手机号" :prefix-icon="Iphone" size="large" />
-          </el-form-item>
-        </template>
+        <el-form-item prop="phone">
+          <el-input v-model="loginForm.phone" placeholder="手机号" :prefix-icon="Iphone" size="large" />
+        </el-form-item>
+        <el-form-item prop="name">
+          <el-input v-model="loginForm.name" placeholder="姓名" :prefix-icon="User" size="large" />
+        </el-form-item>
         <el-form-item prop="password">
           <el-input v-model="loginForm.password" type="password" placeholder="密码" :prefix-icon="Lock" show-password size="large" />
         </el-form-item>
@@ -51,19 +40,16 @@ const router = useRouter()
 const userStore = useUserStore()
 const formRef = ref()
 const loading = ref(false)
-const loginType = ref("username")
 
 const loginForm = reactive({
-  username: "",
-  name: "",
   phone: "",
+  name: "",
   password: "",
 })
 
 const rules = {
-  username: [{ required: true, message: "请输入用户名", trigger: "blur" }],
-  name: [{ required: true, message: "请输入姓名", trigger: "blur" }],
   phone: [{ required: true, message: "请输入手机号", trigger: "blur" }],
+  name: [{ required: true, message: "请输入姓名", trigger: "blur" }],
   password: [{ required: true, message: "请输入密码", trigger: "blur" }],
 }
 
@@ -72,11 +58,7 @@ async function handleLogin() {
   if (!valid) return
   loading.value = true
   try {
-    if (loginType.value === "username") {
-      await userStore.patientLogin({ username: loginForm.username, password: loginForm.password })
-    } else {
-      await userStore.patientLoginByPhone({ name: loginForm.name, phone: loginForm.phone, password: loginForm.password })
-    }
+    await userStore.patientLoginByPhone({ name: loginForm.name, phone: loginForm.phone, password: loginForm.password })
     ElMessage.success("登录成功")
     router.push("/patient/triage")
   } catch { }
@@ -98,10 +80,6 @@ async function handleLogin() {
 }
 .login-brand h2 { font-size: 22px; font-weight: 700; color: #202124; margin-bottom: 6px; }
 .login-brand p { font-size: 14px; color: #5f6368; }
-.login-tabs { margin-bottom: 20px; }
-.login-tabs :deep(.el-tabs__nav) { width: 100%; }
-.login-tabs :deep(.el-tabs__item) { width: 50%; text-align: center; font-size: 15px; }
-.login-tabs :deep(.el-tabs__nav-wrap::after) { display: none; }
 .login-btn { width: 100%; height: 48px; font-size: 17px; border-radius: 10px; margin-top: 8px; }
 .login-footer { text-align: center; font-size: 14px; color: #5f6368; margin-top: 24px; }
 .login-footer a { color: #1a73e8; text-decoration: none; font-weight: 500; }
