@@ -31,14 +31,17 @@ public class RegistrationController {
     @Operation(summary = "挂号列表", description = "获取患者或医生的挂号记录列表")
     public CommonResult<List<RegistrationResponse.RegistrationListItem>> list(
             @RequestParam(required = false) Long patientId,
-            @RequestParam(required = false) Long doctorId) {
+            @RequestParam(required = false) Long doctorId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String department,
+            @RequestParam(required = false) String date) {
         List<RegistrationResponse.RegistrationListItem> list;
-        if (patientId != null) {
+        if (doctorId != null) {
+            list = registrationService.getDoctorRegistrations(doctorId, status, department, date);
+        } else if (patientId != null) {
             list = registrationService.getPatientRegistrations(patientId);
-        } else if (doctorId != null) {
-            list = registrationService.getDoctorRegistrations(doctorId);
         } else {
-            return CommonResult.fail(400, "patientId或doctorId至少需要一个");
+            list = List.of();
         }
         return CommonResult.success(list);
     }
@@ -48,5 +51,23 @@ public class RegistrationController {
     public CommonResult<RegistrationResponse> cancel(@PathVariable Long id, @RequestParam Long patientId) {
         RegistrationResponse response = registrationService.cancelRegistration(id, patientId);
         return CommonResult.success("取消成功", response);
+    }
+
+    @PostMapping("/start/{id}")
+    @Operation(summary = "开始问诊", description = "医生开始接诊，更新挂号状态为接诊中")
+    public CommonResult<RegistrationResponse.RegistrationListItem> startConsultation(
+            @PathVariable Long id,
+            @RequestParam Long doctorId) {
+        RegistrationResponse.RegistrationListItem response = registrationService.startConsultation(id, doctorId);
+        return CommonResult.success("接诊成功", response);
+    }
+
+    @PostMapping("/complete/{id}")
+    @Operation(summary = "完成问诊", description = "医生完成问诊，更新挂号状态为已完成")
+    public CommonResult<RegistrationResponse.RegistrationListItem> completeConsultation(
+            @PathVariable Long id,
+            @RequestParam Long doctorId) {
+        RegistrationResponse.RegistrationListItem response = registrationService.completeConsultation(id, doctorId);
+        return CommonResult.success("问诊完成", response);
     }
 }

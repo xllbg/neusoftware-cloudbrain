@@ -14,8 +14,8 @@ export const useUserStore = defineStore("user", () => {
   const userName = computed(() => userInfo.value?.name ?? "")
   const userId = computed(() => userInfo.value?.userId)
 
-  // 患者登录 (phone+name+password)
-  async function patientLogin(loginForm: { phone: string; name: string; password: string }) {
+  // 患者登录 (username+password)
+  async function patientLogin(loginForm: { username: string; password: string }) {
     const res = await loginPatient(loginForm)
     token.value = res.data.token
     userInfo.value = res.data

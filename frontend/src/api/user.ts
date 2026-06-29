@@ -5,7 +5,7 @@ export function registerPatient(data: RegisterForm) {
   return encryptedPost<LoginResult>("/patient/register", data)
 }
 
-export function loginPatient(data: { phone: string; name: string; password: string }) {
+export function loginPatient(data: { username: string; password: string }) {
   return encryptedPost<LoginResult>("/patient/login", data)
 }
 

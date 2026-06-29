@@ -1,186 +1,282 @@
 <template>
   <div class="prescription-page page-container">
-    <h2 class="page-title">开具处方</h2>
+    <div class="page-header">
+      <el-button @click="goBack">
+        <el-icon><ArrowLeft /></el-icon>
+        返回
+      </el-button>
+      <h2 class="page-title">开具处方</h2>
+      <el-button type="primary" @click="submitPrescription" :loading="submitting">
+        <el-icon><Check /></el-icon>
+        保存处方
+      </el-button>
+    </div>
+
+    <el-card class="page-card patient-info-card">
+      <el-descriptions :column="4" border size="small">
+        <el-descriptions-item label="患者">{{ patientName }}</el-descriptions-item>
+        <el-descriptions-item label="患者ID">{{ patientId }}</el-descriptions-item>
+        <el-descriptions-item label="挂号ID">{{ registrationId || "-" }}</el-descriptions-item>
+        <el-descriptions-item label="医生">{{ doctorName }}</el-descriptions-item>
+      </el-descriptions>
+    </el-card>
 
     <el-card class="page-card">
-      <el-form :model="form" label-width="100px">
-        <el-form-item label="诊断">
-          <el-input v-model="form.diagnosis" placeholder="请输入诊断结果" />
-        </el-form-item>
-
-        <el-form-item label="药品明细">
-          <div class="drug-items">
-            <div v-for="(item, idx) in form.items" :key="idx" class="drug-row">
-              <el-input v-model="item.drugName" placeholder="药品名称" style="width:150px" />
-              <el-input v-model="item.dosage" placeholder="用量" style="width:100px" />
-              <el-input v-model="item.frequency" placeholder="频次" style="width:100px" />
-              <el-input v-model="item.duration" placeholder="疗程" style="width:100px" />
-              <el-input v-model="item.note" placeholder="备注" style="width:130px" />
-              <el-button type="danger" :icon="Delete" circle @click="removeDrug(idx)" />
-            </div>
-            <el-button type="primary" link @click="addDrug">
-              <el-icon><Plus /></el-icon> 添加药品
-            </el-button>
-          </div>
-        </el-form-item>
-
-        <el-form-item>
-          <div style="display:flex; gap:12px;">
-            <el-button type="primary" size="large" :loading="submitting" @click="handleSubmit">
-              提交处方
-            </el-button>
-            <el-button
-              type="warning"
-              size="large"
-              :loading="aiChecking"
-              :disabled="!createdPrescriptionId"
-              @click="handleAICheck"
-            >
+      <template #header>
+        <div class="card-header">
+          <span>药品列表</span>
+          <div class="header-actions">
+            <el-button type="success" size="small" @click="handleRecommendMedicine" :loading="recommending">
               <el-icon><MagicStick /></el-icon>
-              AI 审核
+              AI推荐用药
+            </el-button>
+            <el-button type="primary" size="small" @click="addMedicine">
+              <el-icon><Plus /></el-icon>
+              添加药品
             </el-button>
           </div>
-          <div v-if="!createdPrescriptionId" style="color:#909399; font-size:12px; margin-top:4px;">
-            ⚠ 请先提交处方，再使用 AI 审核
-          </div>
+        </div>
+      </template>
+
+      <el-table :data="medicineList" border>
+        <el-table-column type="index" label="序号" width="60" />
+        <el-table-column label="药品名称" min-width="150">
+          <template #default="{ row }">
+            <el-input v-model="row.name" placeholder="请输入药品名称" />
+          </template>
+        </el-table-column>
+        <el-table-column label="剂量" width="150">
+          <template #default="{ row }">
+            <el-input v-model="row.dose" placeholder="如：2片" />
+          </template>
+        </el-table-column>
+        <el-table-column label="用法" width="200">
+          <template #default="{ row }">
+            <el-input v-model="row.frequency" placeholder="如：每日3次，饭后服用" />
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="80">
+          <template #default="{ $index }">
+            <el-button type="danger" size="small" link @click="removeMedicine($index)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <el-form label-width="100px" class="form-extra">
+        <el-form-item label="总用量">
+          <el-input v-model="dosage" placeholder="如：共7天用量" style="width: 300px" />
+        </el-form-item>
+        <el-form-item label="用药说明">
+          <el-input
+            v-model="usage"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入用药说明和注意事项"
+          />
         </el-form-item>
       </el-form>
-
-      <!-- AI 降级提示 -->
-      <el-alert
-        v-if="fallbackMode"
-        title="AI 审核服务暂不可用，您可以直接提交处方"
-        type="warning"
-        show-icon
-        :closable="false"
-        style="margin-bottom:16px;"
-      />
-
-      <!-- AI 审核结果 -->
-      <div v-if="aiResult" class="ai-result">
-        <div class="ai-result-title">AI 审核结果</div>
-        <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
-          <el-tag :type="aiResult.approved ? 'success' : 'danger'" size="large">
-            {{ aiResult.approved ? "审核通过" : "审核不通过" }}
-          </el-tag>
-          <el-tag :class="riskClass">
-            风险等级：{{ riskLabel }}
-          </el-tag>
-        </div>
-        <div v-if="aiResult.warnings.length" style="margin-top:8px;">
-          <p style="font-weight:600; color:#f56c6c;">⚠ 警告：</p>
-          <p v-for="(w, i) in aiResult.warnings" :key="i" class="warning-item">{{ i+1 }}. {{ w }}</p>
-        </div>
-        <div v-if="aiResult.suggestions.length" style="margin-top:8px;">
-          <p style="font-weight:600; color:#67c23a;">💡 建议：</p>
-          <p v-for="(s, i) in aiResult.suggestions" :key="i" class="suggestion-item">{{ i+1 }}. {{ s }}</p>
-        </div>
-      </div>
     </el-card>
+
+    <el-dialog v-model="checkDialogVisible" title="AI 处方审核" width="600px">
+      <app-loading :visible="checking" />
+      <div v-if="!checking && checkResult">
+        <el-descriptions :column="1" border>
+          <el-descriptions-item label="审核结果">
+            <el-tag :type="checkResult.checkResult === '通过' ? 'success' : 'warning'">
+              {{ checkResult.checkResult }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="风险等级">
+            <el-tag :type="checkResult.riskLevel === '低风险' ? 'success' : checkResult.riskLevel === '中风险' ? 'warning' : 'danger'">
+              {{ checkResult.riskLevel }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="用药建议">
+            <div style="white-space: pre-wrap; line-height: 1.6;">{{ checkResult.medicationSuggestions }}</div>
+          </el-descriptions-item>
+          <el-descriptions-item label="相互作用检测">
+            <div style="white-space: pre-wrap; line-height: 1.6;">{{ checkResult.interactionDetection }}</div>
+          </el-descriptions-item>
+          <el-descriptions-item label="风险提示">
+            <div style="white-space: pre-wrap; line-height: 1.6; color: #e6a23c;">{{ checkResult.riskHints }}</div>
+          </el-descriptions-item>
+        </el-descriptions>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from "vue"
+import { ref, reactive, onMounted } from "vue"
 import { useRoute, useRouter } from "vue-router"
-import { ElMessage } from "element-plus"
-import { Delete, Plus, MagicStick } from "@element-plus/icons-vue"
+import { ArrowLeft, Plus, Check, MagicStick } from "@element-plus/icons-vue"
+import { ElMessage, ElMessageBox } from "element-plus"
 import { usePrescriptionStore } from "@/stores/prescription"
 import { useUserStore } from "@/stores/user"
-import { callAIService } from "@/api"
-import type { PrescriptionItem, AICheckResult } from "@/types"
+import { useRegistrationStore } from "@/stores/registration"
+import type { AiCheckResult, PrescriptionMedicineItem, RegistrationRecord } from "@/types"
 
 const route = useRoute()
 const router = useRouter()
-const presStore = usePrescriptionStore()
+const prescriptionStore = usePrescriptionStore()
 const userStore = useUserStore()
+const regStore = useRegistrationStore()
+
+const patientId = Number(route.params.patientId)
+const registrationId = Number(route.query.registrationId) || 0
+const patientName = ref("患者")
+const doctorName = ref(userStore.userName || "医生")
+const currentRecord = ref<RegistrationRecord | null>(null)
 
 const submitting = ref(false)
-const aiChecking = ref(false)
-const aiResult = ref<AICheckResult | null>(null)
-const createdPrescriptionId = ref<number | null>(null)
-const fallbackMode = ref(false)
+const checking = ref(false)
+const recommending = ref(false)
+const checkDialogVisible = ref(false)
+const checkResult = ref<AiCheckResult | null>(null)
 
-const form = reactive({
-  diagnosis: "",
-  items: [{ drugName: "", dosage: "", frequency: "", duration: "", note: "" } as PrescriptionItem],
+const medicineList = reactive<PrescriptionMedicineItem[]>([
+  { name: "", dose: "", frequency: "" },
+])
+const dosage = ref("")
+const usage = ref("")
+
+onMounted(async () => {
+  if (userStore.userName) {
+    doctorName.value = userStore.userName
+  }
+  await loadRegistrationInfo()
 })
 
-const riskClass = computed(() => {
-  if (!aiResult.value) return ""
-  return aiResult.value.riskLevel === "HIGH" ? "risk-high"
-    : aiResult.value.riskLevel === "MEDIUM" ? "risk-medium" : "risk-low"
-})
-
-const riskLabel = computed(() => {
-  if (!aiResult.value) return ""
-  return aiResult.value.riskLevel === "HIGH" ? "高风险"
-    : aiResult.value.riskLevel === "MEDIUM" ? "中风险" : "低风险"
-})
-
-function addDrug() {
-  form.items.push({ drugName: "", dosage: "", frequency: "", duration: "", note: "" })
+async function loadRegistrationInfo() {
+  if (!registrationId || !userStore.userId) return
+  try {
+    const list = await regStore.fetchList({ doctorId: userStore.userId })
+    const found = (list || []).find((r: RegistrationRecord) => r.id === registrationId)
+    if (found) {
+      currentRecord.value = found
+      patientName.value = found.patientName || "患者"
+    }
+  } catch (e) {
+    console.error("加载挂号信息失败", e)
+  }
 }
 
-function removeDrug(idx: number) {
-  form.items.splice(idx, 1)
+function addMedicine() {
+  medicineList.push({ name: "", dose: "", frequency: "" })
 }
 
-async function handleSubmit() {
-  if (!form.diagnosis || form.items.length === 0) {
-    ElMessage.warning("请填写诊断和至少一种药品")
+function removeMedicine(index: number) {
+  if (medicineList.length <= 1) {
+    ElMessage.warning("至少保留一个药品")
     return
   }
-  if (!userStore.userId) return
+  medicineList.splice(index, 1)
+}
+
+function validate(): boolean {
+  const validMeds = medicineList.filter((m) => m.name.trim())
+  if (validMeds.length === 0) {
+    ElMessage.warning("请至少添加一个药品")
+    return false
+  }
+  return true
+}
+
+function buildMedicineListJson(): string {
+  const validMeds = medicineList.filter((m) => m.name.trim())
+  return JSON.stringify(validMeds)
+}
+
+async function submitPrescription() {
+  if (!validate()) return
+
+  try {
+    await ElMessageBox.confirm("确认保存处方吗？", "提示", {
+      type: "info",
+    })
+  } catch {
+    return
+  }
 
   submitting.value = true
   try {
-    const result = await presStore.create({
-      patientId: Number(route.params.patientId),
+    await prescriptionStore.create({
+      patientId,
       doctorId: userStore.userId,
-      diagnosis: form.diagnosis,
-      items: form.items,
+      registrationId: registrationId || undefined,
+      medicineList: buildMedicineListJson(),
+      dosage: dosage.value,
+      usage: usage.value,
     })
-    createdPrescriptionId.value = result.id
-    ElMessage.success("处方已提交，可使用 AI 审核")
+    ElMessage.success("处方保存成功")
+    router.back()
+  } catch (e: any) {
+    ElMessage.error(e?.message || "保存失败")
   } finally {
     submitting.value = false
   }
 }
 
-async function handleAICheck() {
-  if (!createdPrescriptionId.value) {
-    ElMessage.warning("请先提交处方")
+async function handleRecommendMedicine() {
+  if (!currentRecord.value) {
+    ElMessage.warning("未获取到患者挂号信息")
     return
   }
-  aiChecking.value = true
+
+  recommending.value = true
   try {
-    const res = await callAIService(
-      () => presStore.check(createdPrescriptionId.value!),
-      {
-        loadingText: "AI 正在审核处方...",
-        fallbackMessage: "AI 审核服务暂时不可用",
-        allowFallback: true,
-      }
-    )
-    if (res.fallback) {
-      fallbackMode.value = true
-      // 降级后仍然可以提交
-      ElMessage.success("处方已提交，您可以稍后重试 AI 审核")
-      router.push("/doctor/history")
-    } else if (res.success && res.data) {
-      aiResult.value = res.data as AICheckResult
+    const result = await prescriptionStore.recommend({
+      symptoms: currentRecord.value.symptom || "",
+      diagnosis: "",
+      department: currentRecord.value.department || "",
+    })
+
+    if (result && result.length > 0) {
+      medicineList.splice(0, medicineList.length, ...result)
+      ElMessage.success(`AI已推荐${result.length}种药品，您可以调整后保存`)
+    } else {
+      ElMessage.info("AI暂未推荐药品，请手动添加")
     }
+  } catch (e: any) {
+    ElMessage.error(e?.message || "AI推荐失败，请手动添加药品")
   } finally {
-    aiChecking.value = false
+    recommending.value = false
   }
+}
+
+function goBack() {
+  router.back()
 }
 </script>
 
 <style scoped>
-.page-title { font-size: 22px; color: #303133; margin-bottom: 24px; }
-.drug-items { width: 100%; }
-.drug-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
-.warning-item { color: #f56c6c; padding: 4px 0; }
-.suggestion-item { color: #67c23a; padding: 2px 0; }
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.page-title {
+  font-size: 22px;
+  color: #303133;
+  margin: 0;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.patient-info-card {
+  margin-bottom: 16px;
+}
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+.form-extra {
+  margin-top: 20px;
+}
 </style>

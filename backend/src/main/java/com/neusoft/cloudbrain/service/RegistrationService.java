@@ -36,37 +36,34 @@ public class RegistrationService {
         Patient patient = patientRepository.findById(request.getPatientId())
                 .orElseThrow(() -> new BusinessException(404, "患者不存在"));
 
-        // 校验医生存在（急诊科doctorId=0时跳过）
-        Doctor doctor = null;
-        String doctorName = "急诊科（待分配）";
-        if (request.getDoctorId() != null && request.getDoctorId() > 0) {
-            doctor = doctorRepository.findById(request.getDoctorId())
-                    .orElseThrow(() -> new BusinessException(404, "医生不存在"));
-            doctorName = doctor.getName();
-        }
+        // 校验医生存在
+        Doctor doctor = doctorRepository.findById(request.getDoctorId())
+                .orElseThrow(() -> new BusinessException(404, "医生不存在"));
 
         // 创建挂号记录
         Registration registration = new Registration();
         registration.setPatientId(request.getPatientId());
         registration.setDoctorId(request.getDoctorId());
-        registration.setDepartment(doctor.getDepartment());
+        registration.setDepartment(request.getDepartment());
         registration.setRegistrationDate(request.getRegistrationDate());
         registration.setTimeSlot(request.getTimeSlot());
         registration.setStatus("pending");
+        registration.setSymptom(request.getSymptom());
 
         Registration saved = registrationRepository.save(registration);
-        log.info("挂号创建成功 - 挂号ID: {}", saved.getId());
+        log.info("挂号创建成功 - 挂号ID: {}, 症状: {}", saved.getId(), saved.getSymptom());
 
         return RegistrationResponse.builder()
                 .id(saved.getId())
                 .patientId(saved.getPatientId())
                 .patientName(patient.getName())
                 .doctorId(saved.getDoctorId())
-                .doctorName(doctorName)
+                .doctorName(doctor.getName())
                 .department(saved.getDepartment())
                 .registrationDate(saved.getRegistrationDate())
                 .timeSlot(saved.getTimeSlot())
                 .status(saved.getStatus())
+                .symptom(saved.getSymptom())
                 .createdAt(saved.getCreatedAt())
                 .build();
     }
@@ -78,20 +75,13 @@ public class RegistrationService {
 
         return registrations.stream()
                 .map(reg -> {
-                    Doctor doctor = null;
-                    if (reg.getDoctorId() != null && reg.getDoctorId() > 0) {
-                        doctor = doctorRepository.findById(reg.getDoctorId()).orElse(null);
-                    }
-                    String doctorName = (doctor != null) ? doctor.getName() : "急诊科（待分配）";
-                    String doctorTitle = (doctor != null) ? doctor.getTitle() : "";
-                    String hospital = (doctor != null) ? doctor.getHospital() : "";
+                    Doctor doctor = doctorRepository.findById(reg.getDoctorId()).orElse(null);
                     return RegistrationResponse.RegistrationListItem.builder()
                             .id(reg.getId())
-                            .patientName("")
-                            .doctorName(doctorName)
+                            .doctorName(doctor != null ? doctor.getName() : "未知")
                             .department(reg.getDepartment())
-                            .doctorTitle(doctorTitle)
-                            .hospital(hospital)
+                            .doctorTitle(doctor != null ? doctor.getTitle() : "")
+                            .hospital(doctor != null ? doctor.getHospital() : "")
                             .registrationDate(reg.getRegistrationDate())
                             .timeSlot(reg.getTimeSlot())
                             .status(reg.getStatus())
@@ -101,22 +91,42 @@ public class RegistrationService {
                 .collect(Collectors.toList());
     }
 
-    public List<RegistrationResponse.RegistrationListItem> getDoctorRegistrations(Long doctorId) {
-        log.info("查询医生挂号列表 - 医生ID: {}", doctorId);
+    public List<RegistrationResponse.RegistrationListItem> getDoctorRegistrations(Long doctorId, String status, String department, String date) {
+        log.info("查询医生挂号列表 - 医生ID: {}, 状态: {}, 科室: {}, 日期: {}", doctorId, status, department, date);
 
         List<Registration> registrations = registrationRepository.findByDoctorIdOrderByCreatedAtDesc(doctorId);
 
         return registrations.stream()
+                .filter(reg -> {
+                    if (status != null && !status.isEmpty()) {
+                        return status.equalsIgnoreCase(reg.getStatus());
+                    }
+                    return true;
+                })
+                .filter(reg -> {
+                    if (department != null && !department.isEmpty()) {
+                        return department.equals(reg.getDepartment());
+                    }
+                    return true;
+                })
+                .filter(reg -> {
+                    if (date != null && !date.isEmpty()) {
+                        return date.equals(reg.getRegistrationDate());
+                    }
+                    return true;
+                })
                 .map(reg -> {
                     Patient patient = patientRepository.findById(reg.getPatientId()).orElse(null);
                     return RegistrationResponse.RegistrationListItem.builder()
                             .id(reg.getId())
+                            .patientId(reg.getPatientId())
                             .patientName(patient != null ? patient.getName() : "未知")
-                            .doctorName("")
                             .department(reg.getDepartment())
                             .registrationDate(reg.getRegistrationDate())
                             .timeSlot(reg.getTimeSlot())
                             .status(reg.getStatus())
+                            .symptom(reg.getSymptom())
+                            .triageResult(reg.getTriageResult())
                             .createdAt(reg.getCreatedAt())
                             .build();
                 })
@@ -157,6 +167,76 @@ public class RegistrationService {
                 .registrationDate(saved.getRegistrationDate())
                 .timeSlot(saved.getTimeSlot())
                 .status(saved.getStatus())
+                .createdAt(saved.getCreatedAt())
+                .build();
+    }
+
+    @Transactional
+    public RegistrationResponse.RegistrationListItem startConsultation(Long registrationId, Long doctorId) {
+        log.info("开始问诊 - 挂号ID: {}, 医生ID: {}", registrationId, doctorId);
+
+        Registration registration = registrationRepository.findById(registrationId)
+                .orElseThrow(() -> new BusinessException(404, "挂号记录不存在"));
+
+        if (!registration.getDoctorId().equals(doctorId)) {
+            throw new BusinessException(403, "无权接诊此挂号");
+        }
+
+        if (!"pending".equals(registration.getStatus())) {
+            throw new BusinessException(400, "该挂号状态不允许接诊");
+        }
+
+        registration.setStatus("in_progress");
+        Registration saved = registrationRepository.save(registration);
+        log.info("接诊成功 - 挂号ID: {}", registrationId);
+
+        Patient patient = patientRepository.findById(saved.getPatientId()).orElse(null);
+
+        return RegistrationResponse.RegistrationListItem.builder()
+                .id(saved.getId())
+                .patientId(saved.getPatientId())
+                .patientName(patient != null ? patient.getName() : "未知")
+                .department(saved.getDepartment())
+                .registrationDate(saved.getRegistrationDate())
+                .timeSlot(saved.getTimeSlot())
+                .status(saved.getStatus())
+                .symptom(saved.getSymptom())
+                .triageResult(saved.getTriageResult())
+                .createdAt(saved.getCreatedAt())
+                .build();
+    }
+
+    @Transactional
+    public RegistrationResponse.RegistrationListItem completeConsultation(Long registrationId, Long doctorId) {
+        log.info("完成问诊 - 挂号ID: {}, 医生ID: {}", registrationId, doctorId);
+
+        Registration registration = registrationRepository.findById(registrationId)
+                .orElseThrow(() -> new BusinessException(404, "挂号记录不存在"));
+
+        if (!registration.getDoctorId().equals(doctorId)) {
+            throw new BusinessException(403, "无权操作此挂号");
+        }
+
+        if ("completed".equals(registration.getStatus())) {
+            throw new BusinessException(400, "该挂号已完成");
+        }
+
+        registration.setStatus("completed");
+        Registration saved = registrationRepository.save(registration);
+        log.info("问诊完成 - 挂号ID: {}", registrationId);
+
+        Patient patient = patientRepository.findById(saved.getPatientId()).orElse(null);
+
+        return RegistrationResponse.RegistrationListItem.builder()
+                .id(saved.getId())
+                .patientId(saved.getPatientId())
+                .patientName(patient != null ? patient.getName() : "未知")
+                .department(saved.getDepartment())
+                .registrationDate(saved.getRegistrationDate())
+                .timeSlot(saved.getTimeSlot())
+                .status(saved.getStatus())
+                .symptom(saved.getSymptom())
+                .triageResult(saved.getTriageResult())
                 .createdAt(saved.getCreatedAt())
                 .build();
     }

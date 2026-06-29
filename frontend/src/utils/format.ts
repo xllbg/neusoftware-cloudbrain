@@ -21,6 +21,7 @@ export function formatDateTime(dateStr: string): string {
 export function getStatusTag(status: string): string {
   const map: Record<string, string> = {
     pending: "warning",
+    in_progress: "primary",
     completed: "success",
     cancelled: "info",
     approved: "success",
@@ -31,7 +32,8 @@ export function getStatusTag(status: string): string {
 
 export function getStatusLabel(status: string): string {
   const map: Record<string, string> = {
-    pending: "待处理",
+    pending: "待接诊",
+    in_progress: "接诊中",
     completed: "已完成",
     cancelled: "已取消",
     approved: "已通过",

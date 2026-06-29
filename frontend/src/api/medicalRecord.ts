@@ -1,15 +1,15 @@
 import { get, post } from "./index"
-import type { MedicalRecord, AIGenerateRecordRequest, MedicalRecordForm } from "@/types"
+import type { MedicalRecord, MedicalRecordForm, AiMedicalRecordResult } from "@/types"
 
-export function generateMedicalRecord(data: AIGenerateRecordRequest) {
-  return post<MedicalRecord>("/medical-record/generate", data)
+export function generateMedicalRecord(patientId: number, dialogueText: string) {
+  return post<AiMedicalRecordResult>(`/medical-record/generate?patientId=${patientId}`, { dialogueText })
 }
 
 export function saveMedicalRecord(data: MedicalRecordForm) {
   return post<MedicalRecord>("/medical-record/save", data)
 }
 
-export function getMedicalRecordList(params: any) {
+export function getMedicalRecordList(params: { patientId?: number; doctorId?: number }) {
   return get<MedicalRecord[]>("/medical-record/list", params)
 }
 
