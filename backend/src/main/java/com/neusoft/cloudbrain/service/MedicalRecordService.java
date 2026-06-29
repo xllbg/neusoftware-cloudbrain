@@ -1,7 +1,5 @@
 package com.neusoft.cloudbrain.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.neusoft.cloudbrain.entity.Doctor;
 import com.neusoft.cloudbrain.entity.MedicalRecord;
 import com.neusoft.cloudbrain.entity.Patient;
@@ -28,7 +26,6 @@ public class MedicalRecordService {
     private final PatientRepository patientRepository;
     private final DoctorRepository doctorRepository;
     private final AiService aiService;
-    private final ObjectMapper objectMapper;
 
     @Transactional
     public MedicalRecord createMedicalRecord(Long patientId, Long doctorId, Long registrationId,
@@ -86,48 +83,12 @@ public class MedicalRecordService {
 
     private Map<String, Object> parseAiMedicalRecordResult(String aiResult) {
         Map<String, Object> result = new HashMap<>();
-        try {
-            JsonNode node = objectMapper.readTree(aiResult);
-            result.put("presentIllness", getTextOrEmpty(node, "presentIllness"));
-            result.put("pastHistory", getTextOrEmpty(node, "pastHistory"));
-            result.put("physicalExamination", getTextOrEmpty(node, "physicalExamination"));
-            result.put("diagnosis", getTextOrEmpty(node, "diagnosis"));
-            result.put("treatmentPlan", getTextOrEmpty(node, "treatmentPlan"));
-        } catch (Exception e) {
-            log.error("解析AI病历结果失败: {}", e.getMessage());
-        }
+        result.put("presentIllness", "");
+        result.put("pastHistory", "");
+        result.put("physicalExamination", "");
+        result.put("diagnosis", "");
+        result.put("treatmentPlan", "");
         result.put("aiRawResult", aiResult);
-
-        if (aiResult == null || aiResult.isBlank()) {
-            return result;
-        }
-
-        try {
-            com.fasterxml.jackson.databind.JsonNode root = new com.fasterxml.jackson.databind.ObjectMapper().readTree(aiResult);
-            if (root.has("presentIllness")) {
-                result.put("presentIllness", root.path("presentIllness").asText(""));
-            }
-            if (root.has("pastHistory")) {
-                result.put("pastHistory", root.path("pastHistory").asText(""));
-            }
-            if (root.has("physicalExamination")) {
-                result.put("physicalExamination", root.path("physicalExamination").asText(""));
-            }
-            if (root.has("diagnosis")) {
-                result.put("diagnosis", root.path("diagnosis").asText(""));
-            }
-            if (root.has("treatmentPlan")) {
-                result.put("treatmentPlan", root.path("treatmentPlan").asText(""));
-            }
-            log.info("AI病历解析成功");
-        } catch (Exception e) {
-            log.warn("解析AI病历结果失败: {}", e.getMessage());
-        }
-
         return result;
-    }
-
-    private String getTextOrEmpty(JsonNode node, String field) {
-        return node.has(field) ? node.get(field).asText() : "";
     }
 }

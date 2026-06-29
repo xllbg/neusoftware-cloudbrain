@@ -49,6 +49,10 @@ public class SecurityConfig {
                     "/api/registration/list",
                     "/api/registration/cancel",
                     "/api/registration/cancel/**",
+                    "/api/registration/start/**",
+                    "/api/registration/complete/**",
+                    "/api/consultation/send",
+                    "/api/consultation/messages",
                     "/api/medical-record/generate",
                     "/api/medical-record/save",
                     "/api/medical-record/list",
@@ -57,6 +61,7 @@ public class SecurityConfig {
                     "/api/prescription/create",
                     "/api/prescription/check",
                     "/api/prescription/check/**",
+                    "/api/prescription/recommend",
                     "/api/prescription/list",
                     "/api/prescription/detail",
                     "/api/prescription/detail/**"

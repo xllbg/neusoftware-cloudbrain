@@ -43,7 +43,6 @@ public class DoctorVO {
 
     @Schema(description = "简介", example = "从事心血管内科临床工作20余年，擅长冠心病、高血压等疾病的诊治")
     private String introduction;
-    private String status;
 
     @Schema(description = "审核状态", example = "APPROVED")
     private String status;
