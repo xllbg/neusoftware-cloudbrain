@@ -7,11 +7,11 @@
     </div>
     <div class="login-form-wrap">
       <el-form ref="formRef" :model="loginForm" :rules="rules" label-width="0" @keyup.enter="handleLogin">
-        <el-form-item prop="phone">
-          <el-input v-model="loginForm.phone" placeholder="手机号" :prefix-icon="Iphone" size="large" />
-        </el-form-item>
         <el-form-item prop="name">
           <el-input v-model="loginForm.name" placeholder="姓名" :prefix-icon="User" size="large" />
+        </el-form-item>
+        <el-form-item prop="phone">
+          <el-input v-model="loginForm.phone" placeholder="手机号" maxlength="11" :prefix-icon="Iphone" size="large" />
         </el-form-item>
         <el-form-item prop="password">
           <el-input v-model="loginForm.password" type="password" placeholder="密码" :prefix-icon="Lock" show-password size="large" />
@@ -42,14 +42,27 @@ const formRef = ref()
 const loading = ref(false)
 
 const loginForm = reactive({
-  phone: "",
   name: "",
+  phone: "",
   password: "",
 })
 
+const validatePhone = (_rule: any, value: string, callback: any) => {
+  if (!value) {
+    callback(new Error("请输入手机号"))
+  } else if (!/^1\d{10}$/.test(value)) {
+    callback(new Error("手机号格式不正确（11位数字）"))
+  } else {
+    callback()
+  }
+}
+
 const rules = {
-  phone: [{ required: true, message: "请输入手机号", trigger: "blur" }],
   name: [{ required: true, message: "请输入姓名", trigger: "blur" }],
+  phone: [
+    { required: true, message: "请输入手机号", trigger: "blur" },
+    { validator: validatePhone, trigger: "blur" },
+  ],
   password: [{ required: true, message: "请输入密码", trigger: "blur" }],
 }
 
