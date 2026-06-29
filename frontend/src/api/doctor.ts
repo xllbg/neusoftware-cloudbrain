@@ -49,3 +49,8 @@ export function saveConsultationRecord(data: ConsultationRecordData) {
 export function recommendConsultationByAi(registrationId: number) {
   return get<ConsultationRecordRecommendData>("/consultation-record/recommend", { registrationId })
 }
+
+// 获取医生问诊记录列表
+export function getConsultationRecordList(doctorId: number) {
+  return get<ConsultationRecordData[]>("/consultation-record/list", { doctorId })
+}

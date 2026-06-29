@@ -67,7 +67,8 @@ public class SecurityConfig {
                     "/api/prescription/detail/**",
                     "/api/consultation-record/save",
                     "/api/consultation-record/get",
-                    "/api/consultation-record/recommend"
+                    "/api/consultation-record/recommend",
+                    "/api/consultation-record/list"
                 ).permitAll()
                 .anyRequest().authenticated()
             )

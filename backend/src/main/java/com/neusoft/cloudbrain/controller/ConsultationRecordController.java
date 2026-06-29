@@ -10,6 +10,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/consultation-record")
 @RequiredArgsConstructor
@@ -32,6 +34,13 @@ public class ConsultationRecordController {
         if (result == null) {
             return CommonResult.success("暂无问诊记录", null);
         }
+        return CommonResult.success(result);
+    }
+
+    @GetMapping("/list")
+    @Operation(summary = "获取医生问诊记录列表", description = "获取指定医生的所有问诊记录")
+    public CommonResult<List<ConsultationRecordDTO>> listByDoctorId(@RequestParam Long doctorId) {
+        List<ConsultationRecordDTO> result = consultationRecordService.getConsultationRecordsByDoctorId(doctorId);
         return CommonResult.success(result);
     }
 

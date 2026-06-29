@@ -14,6 +14,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -73,6 +76,15 @@ public class ConsultationRecordService {
         return consultationRecordRepository.findById(id)
                 .map(this::toDTO)
                 .orElse(null);
+    }
+
+    public List<ConsultationRecordDTO> getConsultationRecordsByDoctorId(Long doctorId) {
+        log.info("获取医生问诊记录列表 - 医生ID: {}", doctorId);
+
+        List<ConsultationRecord> records = consultationRecordRepository.findByDoctorIdOrderByUpdatedAtDesc(doctorId);
+        return records.stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
     }
 
     public ConsultationRecordDTO recommendByAi(Long registrationId) {
