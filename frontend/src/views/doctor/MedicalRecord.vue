@@ -7,10 +7,6 @@
       </el-button>
       <h2 class="page-title">电子病历</h2>
       <div class="header-actions">
-        <el-button @click="generateRecord" :loading="generating">
-          <el-icon><MagicStick /></el-icon>
-          AI一键生成
-        </el-button>
         <el-button type="primary" @click="saveRecord" :loading="saving">
           <el-icon><Check /></el-icon>
           保存病历
@@ -25,6 +21,13 @@
         <el-descriptions-item label="挂号ID">{{ registrationId || "-" }}</el-descriptions-item>
         <el-descriptions-item label="医生">{{ doctorName }}</el-descriptions-item>
       </el-descriptions>
+    </el-card>
+
+    <el-card class="page-card info-tip-card" v-if="fromConsultation">
+      <div class="tip-content">
+        <el-icon><InfoFilled /></el-icon>
+        <span>病历内容已从问诊记录同步，请检查并修改后保存</span>
+      </div>
     </el-card>
 
     <el-card class="page-card">
@@ -107,18 +110,17 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from "vue"
 import { useRoute, useRouter } from "vue-router"
-import { ArrowLeft, MagicStick, Check } from "@element-plus/icons-vue"
+import { ArrowLeft, Check, InfoFilled } from "@element-plus/icons-vue"
 import { ElMessage } from "element-plus"
 import { useMedicalRecordStore } from "@/stores/medicalRecord"
-import { useConsultationStore } from "@/stores/consultation"
 import { useRegistrationStore } from "@/stores/registration"
 import { useUserStore } from "@/stores/user"
-import type { MedicalRecordForm, ConsultationMessage, RegistrationRecord } from "@/types"
+import type { MedicalRecordForm, RegistrationRecord } from "@/types"
+import { getConsultationRecord } from "@/api/doctor"
 
 const route = useRoute()
 const router = useRouter()
 const recordStore = useMedicalRecordStore()
-const consultStore = useConsultationStore()
 const regStore = useRegistrationStore()
 const userStore = useUserStore()
 
@@ -126,9 +128,9 @@ const patientId = Number(route.params.patientId)
 const registrationId = Number(route.query.registrationId) || 0
 const patientName = ref("患者")
 const doctorName = ref(userStore.userName || "医生")
+const fromConsultation = ref(false)
 
 const saving = ref(false)
-const generating = ref(false)
 
 const form = reactive<MedicalRecordForm>({
   patientId,
@@ -147,6 +149,7 @@ onMounted(async () => {
     doctorName.value = userStore.userName
   }
   await loadPatientInfo()
+  await loadConsultationRecord()
 })
 
 async function loadPatientInfo() {
@@ -156,76 +159,32 @@ async function loadPatientInfo() {
   const reg = (regs || []).find((r: RegistrationRecord) => r.id === registrationId)
   if (reg) {
     patientName.value = reg.patientName
-    if (reg.symptom) {
-      form.chiefComplaint = reg.symptom
-    }
-    if (reg.triageResult) {
-      form.presentIllness = reg.triageResult
-    }
   }
 }
 
-async function generateRecord() {
-  if (!patientId) {
-    ElMessage.warning("缺少患者信息")
-    return
-  }
+async function loadConsultationRecord() {
+  if (!registrationId) return
 
-  const dialogueText = await buildDialogueText()
-
-  if (!dialogueText && !form.chiefComplaint) {
-    ElMessage.warning("暂无对话记录或症状描述，无法生成病历")
-    return
-  }
-
-  generating.value = true
   try {
-    const result = await recordStore.generate(patientId, dialogueText)
-    if (result) {
-      if (result.presentIllness && !form.presentIllness) {
-        form.presentIllness = result.presentIllness
-      } else if (result.presentIllness) {
-        form.presentIllness = result.presentIllness
+    const res = await getConsultationRecord(registrationId)
+    if (res.code === 200 && res.data) {
+      const data = res.data
+      // 从问诊记录填充病历
+      if (data.presentIllness) form.presentIllness = data.presentIllness
+      if (data.pastHistory) form.pastHistory = data.pastHistory
+      if (data.physicalExamination) form.physicalExamination = data.physicalExamination
+      if (data.diagnosis) form.diagnosis = data.diagnosis
+      if (data.chiefComplaint) form.chiefComplaint = data.chiefComplaint
+      if (data.treatmentPlan) form.treatmentPlan = data.treatmentPlan
+
+      // 只有当问诊记录有数据时才显示提示
+      if (form.presentIllness || form.diagnosis) {
+        fromConsultation.value = true
       }
-      if (result.pastHistory) form.pastHistory = result.pastHistory
-      if (result.physicalExamination) form.physicalExamination = result.physicalExamination
-      if (result.diagnosis) form.diagnosis = result.diagnosis
-      if (result.treatmentPlan) form.treatmentPlan = result.treatmentPlan
     }
-    ElMessage.success("AI生成成功，请检查并修改后保存")
-  } catch (e: any) {
-    ElMessage.error(e?.message || "生成失败")
-  } finally {
-    generating.value = false
+  } catch (e) {
+    console.error("加载问诊记录失败", e)
   }
-}
-
-async function buildDialogueText(): Promise<string> {
-  const parts: string[] = []
-
-  if (form.chiefComplaint) {
-    parts.push(`患者主诉：${form.chiefComplaint}`)
-  }
-  if (form.presentIllness) {
-    parts.push(`分诊结果：${form.presentIllness}`)
-  }
-
-  if (registrationId) {
-    try {
-      const messages = await consultStore.fetchMessages(registrationId)
-      if (messages && messages.length > 0) {
-        parts.push("\n问诊对话：")
-        messages.forEach((msg: ConsultationMessage) => {
-          const role = msg.senderType === "DOCTOR" ? "医生" : "患者"
-          parts.push(`${role}：${msg.content}`)
-        })
-      }
-    } catch {
-      // ignore
-    }
-  }
-
-  return parts.join("\n")
 }
 
 async function saveRecord() {
@@ -274,6 +233,18 @@ function goBack() {
   gap: 8px;
 }
 .patient-info-card {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
+}
+.info-tip-card {
+  margin-bottom: 12px;
+  background: #ecf5ff;
+  border-color: #409eff;
+}
+.tip-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #409eff;
+  font-size: 14px;
 }
 </style>

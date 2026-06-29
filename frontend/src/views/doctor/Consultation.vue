@@ -59,7 +59,19 @@
       <template #header>
         <div class="card-header">
           <span>问诊记录</span>
-          <el-button size="small" @click="resetForm" v-if="!isCompleted">重置</el-button>
+          <div class="header-actions">
+            <el-button
+              type="primary"
+              size="small"
+              @click="handleAiRecommend"
+              :loading="aiRecommending"
+              :disabled="isCompleted || !record?.symptom"
+            >
+              <el-icon><MagicStick /></el-icon>
+              AI推荐疗法
+            </el-button>
+            <el-button size="small" @click="resetForm" v-if="!isCompleted">重置</el-button>
+          </div>
         </div>
       </template>
 
@@ -142,6 +154,17 @@
             </el-form-item>
           </el-col>
         </el-row>
+
+        <el-row v-if="!isCompleted">
+          <el-col :span="24">
+            <div class="form-actions">
+              <el-button type="primary" @click="handleSave" :loading="saving">
+                <el-icon><Check /></el-icon>
+                保存问诊记录
+              </el-button>
+            </div>
+          </el-col>
+        </el-row>
       </el-form>
     </el-card>
   </div>
@@ -150,12 +173,18 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from "vue"
 import { useRoute, useRouter } from "vue-router"
-import { ArrowLeft, Notebook, Document, Check, Warning, DataAnalysis } from "@element-plus/icons-vue"
+import { ArrowLeft, Notebook, Document, Check, Warning, DataAnalysis, MagicStick } from "@element-plus/icons-vue"
 import { ElMessage, ElMessageBox } from "element-plus"
 import { useRegistrationStore } from "@/stores/registration"
 import { useUserStore } from "@/stores/user"
 import { getStatusTag, getStatusLabel } from "@/utils/format"
 import type { RegistrationRecord } from "@/types"
+import {
+  getConsultationRecord,
+  saveConsultationRecord,
+  recommendConsultationByAi,
+  type ConsultationRecordRecommendData,
+} from "@/api/doctor"
 
 const route = useRoute()
 const router = useRouter()
@@ -163,7 +192,10 @@ const regStore = useRegistrationStore()
 const userStore = useUserStore()
 
 const loading = ref(false)
+const saving = ref(false)
+const aiRecommending = ref(false)
 const record = ref<RegistrationRecord | null>(null)
+const consultationRecordId = ref<number | null>(null)
 const registrationId = Number(route.params.registrationId)
 
 const consultForm = reactive({
@@ -186,18 +218,105 @@ async function loadRecord() {
   if (!userStore.userId) return
   loading.value = true
   try {
+    // 加载挂号记录
     const res = await regStore.fetchList({ doctorId: userStore.userId })
     const found = (res || []).find((r: RegistrationRecord) => r.id === registrationId)
     if (found) {
       record.value = found
       // 如果有症状，自动填充到现病史
-      if (found.symptom) {
+      if (found.symptom && !consultForm.presentIllness) {
         consultForm.presentIllness = `患者自述：${found.symptom}`
         consultForm.chiefComplaint = found.symptom.substring(0, 50)
       }
     }
+
+    // 加载已保存的问诊记录
+    await loadConsultationRecord()
   } finally {
     loading.value = false
+  }
+}
+
+async function loadConsultationRecord() {
+  if (!registrationId) return
+  try {
+    const res = await getConsultationRecord(registrationId)
+    if (res.code === 200 && res.data) {
+      const data = res.data
+      consultationRecordId.value = data.id
+      // 填充已保存的问诊记录
+      if (data.presentIllness) consultForm.presentIllness = data.presentIllness
+      if (data.pastHistory) consultForm.pastHistory = data.pastHistory
+      if (data.physicalExamination) consultForm.physicalExamination = data.physicalExamination
+      if (data.diagnosis) consultForm.diagnosis = data.diagnosis
+      if (data.chiefComplaint) consultForm.chiefComplaint = data.chiefComplaint
+      if (data.treatmentPlan) consultForm.treatmentPlan = data.treatmentPlan
+    }
+  } catch (e) {
+    console.error("加载问诊记录失败", e)
+  }
+}
+
+async function handleSave() {
+  if (!userStore.userId || !record.value) {
+    ElMessage.warning("未获取到患者信息")
+    return
+  }
+
+  if (!consultForm.diagnosis.trim()) {
+    ElMessage.warning("请填写初步诊断")
+    return
+  }
+
+  saving.value = true
+  try {
+    await saveConsultationRecord({
+      registrationId: registrationId,
+      patientId: record.value.patientId,
+      doctorId: userStore.userId,
+      presentIllness: consultForm.presentIllness,
+      pastHistory: consultForm.pastHistory,
+      physicalExamination: consultForm.physicalExamination,
+      diagnosis: consultForm.diagnosis,
+      chiefComplaint: consultForm.chiefComplaint,
+      treatmentPlan: consultForm.treatmentPlan,
+      aiRecommended: false,
+    })
+    ElMessage.success("问诊记录保存成功")
+  } catch (e: any) {
+    ElMessage.error(e?.message || "保存失败")
+  } finally {
+    saving.value = false
+  }
+}
+
+async function handleAiRecommend() {
+  if (!record.value?.symptom) {
+    ElMessage.warning("患者暂无自述症状，无法进行AI推荐")
+    return
+  }
+
+  aiRecommending.value = true
+  try {
+    const res = await recommendConsultationByAi(registrationId)
+    if (res.code === 200 && res.data) {
+      const data = res.data as ConsultationRecordRecommendData
+      // 填充AI推荐的内容（用户可以修改）
+      if (data.presentIllness) consultForm.presentIllness = data.presentIllness
+      if (data.pastHistory) consultForm.pastHistory = data.pastHistory
+      if (data.physicalExamination) consultForm.physicalExamination = data.physicalExamination
+      if (data.diagnosis) consultForm.diagnosis = data.diagnosis
+      if (data.chiefComplaint) consultForm.chiefComplaint = data.chiefComplaint
+      if (data.treatmentPlan) consultForm.treatmentPlan = data.treatmentPlan
+
+      ElMessage.success("AI推荐已完成，请检查并修改后保存")
+    } else {
+      ElMessage.error("AI推荐失败")
+    }
+  } catch (e: any) {
+    ElMessage.error(e?.message || "AI推荐失败")
+  } finally {
+    aiRecommending.value = false
   }
 }
 
@@ -213,10 +332,9 @@ function resetForm() {
 async function completeConsultation() {
   if (!registrationId || !userStore.userId) return
 
-  // 表单验证
-  if (!consultForm.diagnosis.trim()) {
-    ElMessage.warning("请填写初步诊断")
-    return
+  // 先保存问诊记录
+  if (consultForm.diagnosis.trim()) {
+    await handleSave()
   }
 
   try {
@@ -332,7 +450,16 @@ function goBack() {
   justify-content: space-between;
   align-items: center;
 }
+.card-header .header-actions {
+  display: flex;
+  gap: 8px;
+}
 .consult-form :deep(.el-textarea__inner) {
   font-size: 14px;
+}
+.form-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
 }
 </style>
