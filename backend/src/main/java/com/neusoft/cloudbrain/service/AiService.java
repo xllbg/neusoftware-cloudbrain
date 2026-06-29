@@ -150,15 +150,15 @@ public class AiService {
                 age, gender, symptoms
         );
 
-        log.debug("发送AI请求，prompt长度: {}", prompt.length());
+        log.info("发送AI请求，prompt长度: {}", prompt.length());
         String response = callDeepSeekApi(prompt);
-        log.debug("AI原始响应: {}", response);
+        log.info("AI原始响应: {}", response);
         return parseDepartmentFromResponse(response);
     }
 
     private String callDeepSeekApi(String prompt) {
         String url = baseUrl + "/chat/completions";
-        log.debug("DeepSeek API URL: {}", url);
+        log.info("DeepSeek API URL: {}", url);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -167,10 +167,10 @@ public class AiService {
         Map<String, Object> body = new HashMap<>();
         body.put("model", model);
         body.put("messages", List.of(Map.of("role", "user", "content", prompt)));
-        body.put("max_tokens", 20);
+        body.put("max_tokens", 1000);
         body.put("temperature", 0.1);
 
-        log.debug("请求体: model={}, max_tokens=20, temperature=0.1", model);
+        log.info("请求体: model={}, max_tokens=1000, temperature=0.1", model);
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
 
