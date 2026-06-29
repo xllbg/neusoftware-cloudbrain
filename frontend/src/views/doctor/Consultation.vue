@@ -46,7 +46,7 @@
         </div>
         <div class="section-item ai-triage" v-if="record?.triageResult">
           <div class="section-label">
-            <el-icon><DataAnalysis /></el-icon>
+            <el-icon><DataAnalysis /></elIcon>
             <span>AI分诊结果</span>
           </div>
           <div class="section-content">{{ record.triageResult }}</div>
@@ -76,6 +76,7 @@
       </template>
 
       <el-form :model="consultForm" label-width="100px" class="consult-form">
+        <!-- 现病史 -->
         <el-row :gutter="20">
           <el-col :span="24">
             <el-form-item label="现病史">
@@ -86,10 +87,24 @@
                 placeholder="请详细描述患者本次发病经过、主要症状、伴随症状等"
                 :disabled="isCompleted"
               />
+              <!-- AI推荐结果 -->
+              <div v-if="aiResults.presentIllness && !aiResultsTaken.presentIllness" class="ai-result-box">
+                <div class="ai-result-label">
+                  <el-icon><MagicStick /></el-icon>
+                  <span>AI推荐</span>
+                </div>
+                <div class="ai-result-content">{{ aiResults.presentIllness }}</div>
+                <div class="ai-result-actions">
+                  <el-button type="primary" size="small" @click="takeAiResult('presentIllness')">
+                    采纳
+                  </el-button>
+                </div>
+              </div>
             </el-form-item>
           </el-col>
         </el-row>
 
+        <!-- 既往史 -->
         <el-row :gutter="20">
           <el-col :span="24">
             <el-form-item label="既往史">
@@ -100,10 +115,24 @@
                 placeholder="请描述患者既往病史、过敏史、手术史等"
                 :disabled="isCompleted"
               />
+              <!-- AI推荐结果 -->
+              <div v-if="aiResults.pastHistory && !aiResultsTaken.pastHistory" class="ai-result-box">
+                <div class="ai-result-label">
+                  <el-icon><MagicStick /></el-icon>
+                  <span>AI推荐</span>
+                </div>
+                <div class="ai-result-content">{{ aiResults.pastHistory }}</div>
+                <div class="ai-result-actions">
+                  <el-button type="primary" size="small" @click="takeAiResult('pastHistory')">
+                    采纳
+                  </el-button>
+                </div>
+              </div>
             </el-form-item>
           </el-col>
         </el-row>
 
+        <!-- 体格检查 -->
         <el-row :gutter="20">
           <el-col :span="24">
             <el-form-item label="体格检查">
@@ -114,12 +143,26 @@
                 placeholder="请描述体温、血压、心率等体格检查结果"
                 :disabled="isCompleted"
               />
+              <!-- AI推荐结果 -->
+              <div v-if="aiResults.physicalExamination && !aiResultsTaken.physicalExamination" class="ai-result-box">
+                <div class="ai-result-label">
+                  <el-icon><MagicStick /></el-icon>
+                  <span>AI推荐</span>
+                </div>
+                <div class="ai-result-content">{{ aiResults.physicalExamination }}</div>
+                <div class="ai-result-actions">
+                  <el-button type="primary" size="small" @click="takeAiResult('physicalExamination')">
+                    采纳
+                  </el-button>
+                </div>
+              </div>
             </el-form-item>
           </el-col>
         </el-row>
 
         <el-divider />
 
+        <!-- 初步诊断 + 主诉 -->
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="初步诊断">
@@ -128,6 +171,19 @@
                 placeholder="请输入初步诊断"
                 :disabled="isCompleted"
               />
+              <!-- AI推荐结果 -->
+              <div v-if="aiResults.diagnosis && !aiResultsTaken.diagnosis" class="ai-result-box">
+                <div class="ai-result-label">
+                  <el-icon><MagicStick /></el-icon>
+                  <span>AI推荐</span>
+                </div>
+                <div class="ai-result-content">{{ aiResults.diagnosis }}</div>
+                <div class="ai-result-actions">
+                  <el-button type="primary" size="small" @click="takeAiResult('diagnosis')">
+                    采纳
+                  </el-button>
+                </div>
+              </div>
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -137,10 +193,24 @@
                 placeholder="请输入主诉"
                 :disabled="isCompleted"
               />
+              <!-- AI推荐结果 -->
+              <div v-if="aiResults.chiefComplaint && !aiResultsTaken.chiefComplaint" class="ai-result-box">
+                <div class="ai-result-label">
+                  <el-icon><MagicStick /></el-icon>
+                  <span>AI推荐</span>
+                </div>
+                <div class="ai-result-content">{{ aiResults.chiefComplaint }}</div>
+                <div class="ai-result-actions">
+                  <el-button type="primary" size="small" @click="takeAiResult('chiefComplaint')">
+                    采纳
+                  </el-button>
+                </div>
+              </div>
             </el-form-item>
           </el-col>
         </el-row>
 
+        <!-- 治疗意见 -->
         <el-row :gutter="20">
           <el-col :span="24">
             <el-form-item label="治疗意见">
@@ -151,6 +221,19 @@
                 placeholder="请输入治疗意见、注意事项等"
                 :disabled="isCompleted"
               />
+              <!-- AI推荐结果 -->
+              <div v-if="aiResults.treatmentPlan && !aiResultsTaken.treatmentPlan" class="ai-result-box">
+                <div class="ai-result-label">
+                  <el-icon><MagicStick /></el-icon>
+                  <span>AI推荐</span>
+                </div>
+                <div class="ai-result-content">{{ aiResults.treatmentPlan }}</div>
+                <div class="ai-result-actions">
+                  <el-button type="primary" size="small" @click="takeAiResult('treatmentPlan')">
+                    采纳
+                  </el-button>
+                </div>
+              </div>
             </el-form-item>
           </el-col>
         </el-row>
@@ -197,6 +280,26 @@ const aiRecommending = ref(false)
 const record = ref<RegistrationRecord | null>(null)
 const consultationRecordId = ref<number | null>(null)
 const registrationId = Number(route.params.registrationId)
+
+// AI推荐结果
+const aiResults = reactive({
+  presentIllness: "",
+  pastHistory: "",
+  physicalExamination: "",
+  diagnosis: "",
+  chiefComplaint: "",
+  treatmentPlan: "",
+})
+
+// AI结果是否已被采纳
+const aiResultsTaken = reactive({
+  presentIllness: false,
+  pastHistory: false,
+  physicalExamination: false,
+  diagnosis: false,
+  chiefComplaint: false,
+  treatmentPlan: false,
+})
 
 const consultForm = reactive({
   presentIllness: "",
@@ -301,15 +404,21 @@ async function handleAiRecommend() {
     const res = await recommendConsultationByAi(registrationId)
     if (res.code === 200 && res.data) {
       const data = res.data as ConsultationRecordRecommendData
-      // 填充AI推荐的内容（用户可以修改）
-      if (data.presentIllness) consultForm.presentIllness = data.presentIllness
-      if (data.pastHistory) consultForm.pastHistory = data.pastHistory
-      if (data.physicalExamination) consultForm.physicalExamination = data.physicalExamination
-      if (data.diagnosis) consultForm.diagnosis = data.diagnosis
-      if (data.chiefComplaint) consultForm.chiefComplaint = data.chiefComplaint
-      if (data.treatmentPlan) consultForm.treatmentPlan = data.treatmentPlan
 
-      ElMessage.success("AI推荐已完成，请检查并修改后保存")
+      // 清空之前的采纳状态
+      Object.keys(aiResultsTaken).forEach(key => {
+        (aiResultsTaken as any)[key] = false
+      })
+
+      // 填充AI推荐结果（不清空输入框原有内容）
+      if (data.presentIllness) aiResults.presentIllness = data.presentIllness
+      if (data.pastHistory) aiResults.pastHistory = data.pastHistory
+      if (data.physicalExamination) aiResults.physicalExamination = data.physicalExamination
+      if (data.diagnosis) aiResults.diagnosis = data.diagnosis
+      if (data.chiefComplaint) aiResults.chiefComplaint = data.chiefComplaint
+      if (data.treatmentPlan) aiResults.treatmentPlan = data.treatmentPlan
+
+      ElMessage.success("AI推荐已完成，请查看并选择采纳")
     } else {
       ElMessage.error("AI推荐失败")
     }
@@ -320,6 +429,17 @@ async function handleAiRecommend() {
   }
 }
 
+// 采纳AI推荐结果
+function takeAiResult(field: keyof typeof aiResults) {
+  const value = aiResults[field]
+  if (value) {
+    (consultForm as any)[field] = value
+    aiResultsTaken[field] = true
+    aiResults[field] = ""
+    ElMessage.success("已采纳AI推荐内容")
+  }
+}
+
 function resetForm() {
   consultForm.presentIllness = record.value?.symptom ? `患者自述：${record.value.symptom}` : ""
   consultForm.pastHistory = ""
@@ -327,6 +447,13 @@ function resetForm() {
   consultForm.diagnosis = ""
   consultForm.chiefComplaint = record.value?.symptom ? record.value.symptom.substring(0, 50) : ""
   consultForm.treatmentPlan = ""
+  // 清空AI结果
+  Object.keys(aiResults).forEach(key => {
+    (aiResults as any)[key] = ""
+  })
+  Object.keys(aiResultsTaken).forEach(key => {
+    (aiResultsTaken as any)[key] = false
+  })
 }
 
 async function completeConsultation() {
@@ -461,5 +588,34 @@ function goBack() {
   display: flex;
   justify-content: center;
   margin-top: 20px;
+}
+
+/* AI推荐结果样式 */
+.ai-result-box {
+  margin-top: 10px;
+  padding: 12px;
+  background: #f0f9ff;
+  border: 1px solid #91d5ff;
+  border-radius: 6px;
+}
+.ai-result-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: #1890ff;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+.ai-result-content {
+  font-size: 14px;
+  color: #333;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  margin-bottom: 10px;
+}
+.ai-result-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 </style>
