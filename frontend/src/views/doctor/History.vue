@@ -1,6 +1,12 @@
 <template>
   <div class="history-page page-container">
-    <h2 class="page-title">历史记录</h2>
+    <div class="page-header">
+      <el-button type="primary" text @click="goBack">
+        <el-icon><ArrowLeft /></el-icon>
+        返回
+      </el-button>
+      <h2 class="page-title">历史记录</h2>
+    </div>
 
     <el-tabs v-model="activeTab">
       <!-- 处方记录 -->
@@ -219,6 +225,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from "vue"
+import { useRouter } from "vue-router"
+import { ArrowLeft } from "@element-plus/icons-vue"
 import { usePrescriptionStore } from "@/stores/prescription"
 import { useMedicalRecordStore } from "@/stores/medicalRecord"
 import { useUserStore } from "@/stores/user"
@@ -226,9 +234,14 @@ import { getStatusTag, getStatusLabel, formatDateTime } from "@/utils/format"
 import type { PrescriptionRecord, MedicalRecord } from "@/types"
 import { ElMessage } from "element-plus"
 
+const router = useRouter()
 const presStore = usePrescriptionStore()
 const recordStore = useMedicalRecordStore()
 const userStore = useUserStore()
+
+function goBack() {
+  router.push("/doctor/patients")
+}
 
 const activeTab = ref("prescription")
 const presLoading = ref(false)
@@ -295,7 +308,14 @@ function viewRecord(record: MedicalRecord) {
 </script>
 
 <style scoped>
-.page-title { font-size: 22px; color: #303133; margin-bottom: 24px; }
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.page-title { font-size: 22px; color: #303133; margin: 0; }
 
 /* ===== 处方单样式 ===== */
 .prescription-form {
