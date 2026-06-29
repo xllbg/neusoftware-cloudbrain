@@ -223,10 +223,16 @@ async function handleRecommendMedicine() {
     return
   }
 
+  const symptomText = currentRecord.value.symptom || ""
+  if (!symptomText.trim()) {
+    ElMessage.warning("患者暂无自述症状，无法进行AI推荐")
+    return
+  }
+
   recommending.value = true
   try {
     const result = await prescriptionStore.recommend({
-      symptoms: currentRecord.value.symptom || "",
+      symptoms: symptomText,
       diagnosis: "",
       department: currentRecord.value.department || "",
     })

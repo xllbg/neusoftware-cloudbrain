@@ -367,17 +367,40 @@ public class AiService {
         log.info("诊断: {}", diagnosis);
         log.info("科室: {}", department);
 
+        // 根据症状严重程度动态调整推荐数量
+        int maxMedicines = 3; // 默认3种
+        String symptomLower = symptoms.toLowerCase();
+        
+        // 急重症症状少推荐，常见轻症多推荐
+        if (symptomLower.contains("急性") || symptomLower.contains("急诊") || 
+            symptomLower.contains("高热") || symptomLower.contains("昏迷") ||
+            symptomLower.contains("出血") || symptomLower.contains("休克")) {
+            maxMedicines = 2; // 急重症只推荐2种核心用药
+        } else if (symptomLower.contains("慢性") || symptomLower.contains("长期") ||
+                   symptomLower.contains("反复") || symptomLower.contains("复发")) {
+            maxMedicines = 4; // 慢性病可以推荐4种
+        } else if (symptomLower.contains("感冒") || symptomLower.contains("咳嗽") ||
+                   symptomLower.contains("发烧") || symptomLower.contains("头痛") ||
+                   symptomLower.contains("腹痛") || symptomLower.contains("腹泻")) {
+            maxMedicines = 3; // 常见轻症3种
+        }
+        // 其他情况默认3种
+
         String prompt = String.format(
                 "你是临床用药专家。根据以下患者信息，推荐合适的药品。\n\n" +
                 "科室：%s\n" +
                 "症状：%s\n" +
                 "初步诊断：%s\n\n" +
+                "请根据症状的严重程度和性质，智能推荐药品。\n" +
+                "对于轻症常见病，推荐%d种药品即可。\n" +
+                "对于急重症，首选2种核心药物，避免过度用药。\n" +
+                "对于慢性病或复杂情况，最多可推荐%d种。\n\n" +
                 "请以JSON数组格式返回推荐的药品列表，每个药品包含以下字段：\n" +
                 "name: 药品名称\n" +
                 "dose: 剂量（如：2片/次）\n" +
                 "frequency: 用法频次（如：每日3次，饭后服用）\n\n" +
-                "只返回JSON数组，不要其他文字。最多推荐5种常用药品。",
-                department, symptoms, diagnosis
+                "只返回JSON数组，不要其他文字。",
+                department, symptoms, diagnosis, maxMedicines, maxMedicines
         );
 
         long startTime = System.currentTimeMillis();
@@ -386,7 +409,7 @@ public class AiService {
             String content = parseContentFromResponse(response);
             long cost = System.currentTimeMillis() - startTime;
 
-            log.info("药品推荐成功，耗时: {}ms", cost);
+            log.info("药品推荐成功，耗时: {}ms，推荐数量上限: {}", cost, maxMedicines);
             log.debug("推荐结果: {}", content);
             log.info("========== AI药品推荐结束 ==========");
             return content;
