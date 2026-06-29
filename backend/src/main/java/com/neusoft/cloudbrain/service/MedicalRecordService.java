@@ -137,4 +137,39 @@ public class MedicalRecordService {
 
         return result;
     }
+
+    public Map<String, Object> optimizeMedicalRecord(String chiefComplaint, String presentIllness,
+            String pastHistory, String physicalExamination, String diagnosis,
+            String treatmentPlan) {
+        log.info("AI优化病历");
+
+        String aiResult = aiService.optimizeMedicalRecord(
+                chiefComplaint, presentIllness, pastHistory,
+                physicalExamination, diagnosis, treatmentPlan);
+
+        Map<String, Object> result = parseAiMedicalRecordResult(aiResult);
+
+        try {
+            String jsonStr = aiResult.trim();
+            if (jsonStr.startsWith("```json")) {
+                jsonStr = jsonStr.substring(7);
+            }
+            if (jsonStr.startsWith("```")) {
+                jsonStr = jsonStr.substring(3);
+            }
+            if (jsonStr.endsWith("```")) {
+                jsonStr = jsonStr.substring(0, jsonStr.length() - 3);
+            }
+            jsonStr = jsonStr.trim();
+
+            JsonNode root = objectMapper.readTree(jsonStr);
+            if (root.has("chiefComplaint")) {
+                result.put("chiefComplaint", root.path("chiefComplaint").asText(""));
+            }
+        } catch (Exception e) {
+            log.warn("解析chiefComplaint失败: {}", e.getMessage());
+        }
+
+        return result;
+    }
 }

@@ -5,6 +5,17 @@ export function generateMedicalRecord(patientId: number, dialogueText: string) {
   return post<AiMedicalRecordResult>(`/medical-record/generate?patientId=${patientId}`, { dialogueText })
 }
 
+export function optimizeMedicalRecord(data: {
+  chiefComplaint?: string
+  presentIllness?: string
+  pastHistory?: string
+  physicalExamination?: string
+  diagnosis?: string
+  treatmentPlan?: string
+}) {
+  return post<AiMedicalRecordResult>("/medical-record/optimize", data)
+}
+
 export function saveMedicalRecord(data: MedicalRecordForm) {
   return post<MedicalRecord>("/medical-record/save", data)
 }

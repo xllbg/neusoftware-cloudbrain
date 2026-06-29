@@ -62,6 +62,22 @@
         </el-table-column>
       </el-table>
 
+      <!-- AI推荐用药结果 -->
+      <div v-if="aiRecommendList.length > 0 && !aiRecommendTaken" class="ai-recommend-box">
+        <div class="ai-recommend-header">
+          <el-icon><MagicStick /></el-icon>
+          <span>AI推荐用药</span>
+          <el-button type="primary" size="small" @click="takeAiRecommend">采纳全部</el-button>
+        </div>
+        <el-table :data="aiRecommendList" border size="small">
+          <el-table-column type="index" label="序号" width="50" />
+          <el-table-column prop="name" label="药品名称" min-width="120" />
+          <el-table-column prop="dose" label="剂量" width="120" />
+          <el-table-column prop="frequency" label="用法" min-width="150" />
+        </el-table>
+        <div class="ai-recommend-tip">点击"采纳全部"将替换当前药品列表，或手动添加单个药品</div>
+      </div>
+
       <el-form label-width="100px" class="form-extra">
         <el-form-item label="总用量">
           <el-input v-model="dosage" placeholder="如：共7天用量" style="width: 300px" />
@@ -139,6 +155,10 @@ const medicineList = reactive<PrescriptionMedicineItem[]>([
 ])
 const dosage = ref("")
 const usage = ref("")
+
+// AI推荐结果
+const aiRecommendList = ref<PrescriptionMedicineItem[]>([])
+const aiRecommendTaken = ref(false)
 
 onMounted(async () => {
   if (userStore.userName) {
@@ -238,8 +258,9 @@ async function handleRecommendMedicine() {
     })
 
     if (result && result.length > 0) {
-      medicineList.splice(0, medicineList.length, ...result)
-      ElMessage.success(`AI已推荐${result.length}种药品，您可以调整后保存`)
+      aiRecommendList.value = result
+      aiRecommendTaken.value = false
+      ElMessage.success(`AI已推荐${result.length}种药品，请查看并选择采纳`)
     } else {
       ElMessage.info("AI暂未推荐药品，请手动添加")
     }
@@ -247,6 +268,16 @@ async function handleRecommendMedicine() {
     ElMessage.error(e?.message || "AI推荐失败，请手动添加药品")
   } finally {
     recommending.value = false
+  }
+}
+
+// 采纳AI推荐的全部药品
+function takeAiRecommend() {
+  if (aiRecommendList.value.length > 0) {
+    medicineList.splice(0, medicineList.length, ...aiRecommendList.value.map(item => ({ ...item })))
+    aiRecommendTaken.value = true
+    aiRecommendList.value = []
+    ElMessage.success("已采纳AI推荐用药")
   }
 }
 
@@ -284,5 +315,32 @@ function goBack() {
 }
 .form-extra {
   margin-top: 20px;
+}
+
+/* AI推荐用药结果框 */
+.ai-recommend-box {
+  margin-top: 16px;
+  padding: 16px;
+  background: #f0f9eb;
+  border: 1px solid #b3e19d;
+  border-radius: 8px;
+}
+.ai-recommend-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: #67c23a;
+  font-weight: 500;
+}
+.ai-recommend-header .el-button {
+  margin-left: auto;
+}
+.ai-recommend-tip {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #909399;
+  text-align: center;
 }
 </style>

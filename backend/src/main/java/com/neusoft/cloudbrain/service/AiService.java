@@ -430,4 +430,62 @@ public class AiService {
     public String callDeepSeekApiForConsultation(String prompt) {
         return callDeepSeekApi(prompt);
     }
+
+    public String optimizeMedicalRecord(String chiefComplaint, String presentIllness,
+            String pastHistory, String physicalExamination, String diagnosis,
+            String treatmentPlan) {
+        log.info("========== AI优化病历开始 ==========");
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("你是资深病历审核专家。请根据以下问诊记录，优化生成完整规范的电子病历。\n\n");
+        sb.append("当前问诊记录：\n");
+        if (chiefComplaint != null && !chiefComplaint.isBlank()) {
+            sb.append("主诉：").append(chiefComplaint).append("\n");
+        }
+        if (presentIllness != null && !presentIllness.isBlank()) {
+            sb.append("现病史：").append(presentIllness).append("\n");
+        }
+        if (pastHistory != null && !pastHistory.isBlank()) {
+            sb.append("既往史：").append(pastHistory).append("\n");
+        }
+        if (physicalExamination != null && !physicalExamination.isBlank()) {
+            sb.append("体格检查：").append(physicalExamination).append("\n");
+        }
+        if (diagnosis != null && !diagnosis.isBlank()) {
+            sb.append("初步诊断：").append(diagnosis).append("\n");
+        }
+        if (treatmentPlan != null && !treatmentPlan.isBlank()) {
+            sb.append("治疗意见：").append(treatmentPlan).append("\n");
+        }
+        sb.append("\n请对以上内容进行医学规范化优化，要求：\n");
+        sb.append("1. 保持原有核心信息不变，只做规范化、专业化润色\n");
+        sb.append("2. 补充合理的医学细节，使病历更完整规范\n");
+        sb.append("3. 语言专业、准确、符合病历书写规范\n\n");
+        sb.append("请以JSON格式返回，包含以下字段：\n");
+        sb.append("chiefComplaint: 主诉\n");
+        sb.append("presentIllness: 现病史\n");
+        sb.append("pastHistory: 既往史\n");
+        sb.append("physicalExamination: 体格检查\n");
+        sb.append("diagnosis: 初步诊断\n");
+        sb.append("treatmentPlan: 治疗意见\n\n");
+        sb.append("只返回JSON，不要其他文字。");
+
+        String prompt = sb.toString();
+
+        long startTime = System.currentTimeMillis();
+        try {
+            String response = callDeepSeekApi(prompt);
+            String content = parseContentFromResponse(response);
+            long cost = System.currentTimeMillis() - startTime;
+
+            log.info("病历优化成功，耗时: {}ms", cost);
+            log.info("========== AI优化病历结束 ==========");
+            return content;
+        } catch (Exception e) {
+            long cost = System.currentTimeMillis() - startTime;
+            log.error("病历优化失败，耗时: {}ms", cost, e);
+            log.info("========== AI优化病历异常 ==========");
+            return "{\"error\": \"AI服务暂时不可用\"}";
+        }
+    }
 }

@@ -46,7 +46,7 @@
         </div>
         <div class="section-item ai-triage" v-if="record?.triageResult">
           <div class="section-label">
-            <el-icon><DataAnalysis /></elIcon>
+            <el-icon><DataAnalysis /></el-icon>
             <span>AI分诊结果</span>
           </div>
           <div class="section-content">{{ record.triageResult }}</div>
