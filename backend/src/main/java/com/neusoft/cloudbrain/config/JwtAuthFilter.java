@@ -63,7 +63,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             "/api/prescription/recommend",
             "/api/prescription/list",
             "/api/prescription/detail",
-            "/api/prescription/detail/**"
+            "/api/prescription/detail/**",
+            "/api/patient/detail",
+            "/api/patient/detail/**",
+            "/api/prescription/ai-check"
     );
 
     @Override

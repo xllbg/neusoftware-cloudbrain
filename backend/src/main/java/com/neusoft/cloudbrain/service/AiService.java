@@ -359,24 +359,26 @@ public class AiService {
                 "你是医疗处方审核专家。请审核以下处方并提供用药建议。\n\n" +
                 "药品列表：\n%s\n\n" +
                 "患者信息：\n%s\n\n" +
-                "请提供：\n" +
-                "1. 用药建议\n" +
-                "2. 药物相互作用检测\n" +
-                "3. 风险等级（low/medium/high）\n" +
-                "4. 风险提示",
+                "请以JSON格式返回审核结果，不要添加任何其他文字。JSON格式如下：\n" +
+                "{\n" +
+                "  \"checkResult\": \"审核结论（如：审核通过/有风险需注意/不建议使用）\",\n" +
+                "  \"riskLevel\": \"风险等级（低风险/中风险/高风险）\",\n" +
+                "  \"medicationSuggestions\": \"用药建议\",\n" +
+                "  \"interactionDetection\": \"药物相互作用检测\",\n" +
+                "  \"riskHints\": \"风险提示\"\n" +
+                "}",
                 medicineList, patientInfo
         );
 
         long startTime = System.currentTimeMillis();
         try {
             String response = callDeepSeekApi(prompt);
-            String content = parseContentFromResponse(response);
             long cost = System.currentTimeMillis() - startTime;
 
             log.info("处方审核成功，耗时: {}ms", cost);
-            log.debug("审核结果: {}", content);
+            log.debug("审核结果: {}", response);
             log.info("========== AI处方审核结束 ==========");
-            return content;
+            return response;
         } catch (Exception e) {
             long cost = System.currentTimeMillis() - startTime;
             log.error("处方审核失败，耗时: {}ms", cost, e);
