@@ -152,7 +152,8 @@ watch(selectedDepartment, (dept) => {
   doctors.value = allDoctors.value.filter((d) => d.department === dept)
   // 急诊科自动跳过医生选择步骤
   if (dept === "急诊科") {
-    selectedDoctorId.value = 0
+    const emergencyDoc = allDoctors.value.find((d: any) => d.department === "急诊科")
+    selectedDoctorId.value = emergencyDoc ? emergencyDoc.id : 0
   }
 })
 

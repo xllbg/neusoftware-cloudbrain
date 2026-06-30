@@ -37,7 +37,7 @@
           </el-col>
         </el-row>
         <el-form-item label="手机号" prop="phone">
-          <el-input v-model="form.phone" placeholder="请输入手机号" />
+          <el-input v-model="form.phone" placeholder="请输入手机号" maxlength="11" />
         </el-form-item>
 
         <el-divider content-position="left">职业信息</el-divider>
@@ -124,6 +124,16 @@ const validatePass = (_rule: any, value: string, callback: any) => {
   }
 }
 
+const validatePhone = (_rule: any, value: string, callback: any) => {
+  if (!value) {
+    callback(new Error("请输入手机号"))
+  } else if (!/^1[3-9]\d{9}$/.test(value)) {
+    callback(new Error("手机号格式不正确（前三位需为13-19开头）"))
+  } else {
+    callback()
+  }
+}
+
 const rules = {
   username: [
     { required: true, message: "请输入用户名", trigger: "blur" },
@@ -131,7 +141,6 @@ const rules = {
   ],
   password: [
     { required: true, message: "请设置密码", trigger: "blur" },
-    { min: 6, message: "密码至少6位", trigger: "blur" },
   ],
   confirmPassword: [
     { required: true, message: "请确认密码", trigger: "blur" },
@@ -140,7 +149,10 @@ const rules = {
   name: [{ required: true, message: "请输入姓名", trigger: "blur" }],
   gender: [{ required: true, message: "请选择性别", trigger: "change" }],
   age: [{ required: true, message: "请输入年龄", trigger: "blur" }],
-  phone: [{ required: true, message: "请输入手机号", trigger: "blur" }],
+  phone: [
+    { required: true, message: "请输入手机号", trigger: "blur" },
+    { validator: validatePhone, trigger: "blur" },
+  ],
   hospital: [{ required: true, message: "请输入医院名称", trigger: "blur" }],
   department: [{ required: true, message: "请选择科室", trigger: "change" }],
   title: [{ required: true, message: "请选择职称", trigger: "change" }],

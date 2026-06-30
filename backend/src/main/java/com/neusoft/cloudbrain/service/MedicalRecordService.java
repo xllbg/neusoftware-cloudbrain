@@ -85,6 +85,14 @@ public class MedicalRecordService {
         return medicalRecordRepository.findByDoctorIdOrderByCreatedAtDesc(doctorId);
     }
 
+    public MedicalRecord getMedicalRecordByRegistration(Long registrationId) {
+        List<MedicalRecord> records = medicalRecordRepository.findByRegistrationId(registrationId);
+        if (records.isEmpty()) {
+            return null;
+        }
+        return records.get(0);
+    }
+
     public MedicalRecord getMedicalRecordDetail(Long id) {
         return medicalRecordRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(404, "病历不存在"));
@@ -92,6 +100,7 @@ public class MedicalRecordService {
 
     private Map<String, Object> parseAiMedicalRecordResult(String aiResult) {
         Map<String, Object> result = new HashMap<>();
+        result.put("chiefComplaint", "");
         result.put("presentIllness", "");
         result.put("pastHistory", "");
         result.put("physicalExamination", "");
@@ -119,6 +128,9 @@ public class MedicalRecordService {
 
             JsonNode root = objectMapper.readTree(jsonStr);
 
+            if (root.has("chiefComplaint")) {
+                result.put("chiefComplaint", root.path("chiefComplaint").asText(""));
+            }
             if (root.has("presentIllness")) {
                 result.put("presentIllness", root.path("presentIllness").asText(""));
             }

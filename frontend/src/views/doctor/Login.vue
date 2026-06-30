@@ -12,7 +12,7 @@
           <el-input v-model="loginForm.name" placeholder="姓名" :prefix-icon="User" @input="clearStatus" />
         </el-form-item>
         <el-form-item prop="phone">
-          <el-input v-model="loginForm.phone" placeholder="手机号" :prefix-icon="Iphone" @input="clearStatus" />
+          <el-input v-model="loginForm.phone" placeholder="手机号" maxlength="11" :prefix-icon="Iphone" @input="clearStatus" />
         </el-form-item>
         <el-form-item prop="password">
           <el-input v-model="loginForm.password" type="password" placeholder="密码" :prefix-icon="Lock" show-password />
@@ -63,9 +63,22 @@ const formRef = ref()
 const submitting = ref(false)
 
 const loginForm = reactive({ name: "", phone: "", password: "" })
+const validatePhone = (_rule: any, value: string, callback: any) => {
+  if (!value) {
+    callback(new Error("请输入手机号"))
+  } else if (!/^1[3-9]\d{9}$/.test(value)) {
+    callback(new Error("手机号格式不正确（前三位需为13-19开头）"))
+  } else {
+    callback()
+  }
+}
+
 const rules = {
   name: [{ required: true, message: "请输入姓名", trigger: "blur" }],
-  phone: [{ required: true, message: "请输入手机号", trigger: "blur" }],
+  phone: [
+    { required: true, message: "请输入手机号", trigger: "blur" },
+    { validator: validatePhone, trigger: "blur" },
+  ],
   password: [{ required: true, message: "请输入密码", trigger: "blur" }],
 }
 

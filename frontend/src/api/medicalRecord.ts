@@ -24,6 +24,10 @@ export function getMedicalRecordList(params: { patientId?: number; doctorId?: nu
   return get<MedicalRecord[]>("/medical-record/list", params)
 }
 
+export function getMedicalRecordByRegistration(registrationId: number) {
+  return get<MedicalRecord>(`/medical-record/by-registration/${registrationId}`)
+}
+
 export function getMedicalRecordDetail(id: number) {
   return get<MedicalRecord>(`/medical-record/detail/${id}`)
 }

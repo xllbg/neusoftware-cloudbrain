@@ -50,8 +50,8 @@ const loginForm = reactive({
 const validatePhone = (_rule: any, value: string, callback: any) => {
   if (!value) {
     callback(new Error("请输入手机号"))
-  } else if (!/^1\d{10}$/.test(value)) {
-    callback(new Error("手机号格式不正确（11位数字）"))
+  } else if (!/^1[3-9]\d{9}$/.test(value)) {
+    callback(new Error("手机号格式不正确（前三位需为13-19开头）"))
   } else {
     callback()
   }

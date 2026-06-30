@@ -72,7 +72,7 @@ CREATE TABLE triage (
 CREATE TABLE medical_record (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '病历ID',
     patient_id BIGINT NOT NULL COMMENT '患者ID',
-    doctor_id BIGINT NOT NULL COMMENT '医生ID',
+    doctor_id BIGINT COMMENT '医生ID',
     registration_id BIGINT COMMENT '挂号ID',
     chief_complaint TEXT COMMENT '主诉',
     present_illness TEXT COMMENT '现病史',

@@ -49,7 +49,6 @@ public class RegistrationService {
         // 创建挂号记录
         Registration registration = new Registration();
         registration.setPatientId(request.getPatientId());
-        // 急诊科 doctorId=0 转为 null 存储（表示待分配医生）
         registration.setDoctorId(request.getDoctorId() != null && request.getDoctorId() > 0 ? request.getDoctorId() : null);
         registration.setDepartment(request.getDepartment());
         registration.setRegistrationDate(request.getRegistrationDate());
@@ -109,13 +108,13 @@ public class RegistrationService {
 
         List<Registration> registrations = registrationRepository.findByDoctorIdOrderByCreatedAtDesc(doctorId);
 
-        // 急诊科医生：同时查询急诊科待分配挂号（doctorId为NULL且科室为急诊科）
+        // 急诊科医生：同时查询急诊科所有挂号，全部可见
         if ("急诊科".equals(doctorDepartment)) {
             List<Registration> emergencyRegs = registrationRepository.findByDepartmentOrderByCreatedAtDesc("急诊科");
             for (Registration reg : emergencyRegs) {
                 // 检查是否已存在于列表中（避免重复）
                 boolean exists = registrations.stream().anyMatch(r -> r.getId().equals(reg.getId()));
-                // 只添加待分配的挂号（doctorId为NULL）
+                // 所有急诊科挂号都对急诊科医生可见
                 if (!exists) {
                     registrations.add(reg);
                 }

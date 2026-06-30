@@ -7,11 +7,11 @@
       </el-button>
       <h2 class="page-title">电子病历</h2>
       <div class="header-actions">
-        <el-button type="success" @click="handleAiOptimize" :loading="aiOptimizing">
+        <el-button type="success" @click="handleAiOptimize" :disabled="readonlyMode" :loading="aiOptimizing">
           <el-icon><MagicStick /></el-icon>
           AI优化病历
         </el-button>
-        <el-button type="primary" @click="saveRecord" :loading="saving">
+        <el-button type="primary" @click="saveRecord" :disabled="readonlyMode" :loading="saving">
           <el-icon><Check /></el-icon>
           保存病历
         </el-button>
@@ -27,7 +27,7 @@
       </el-descriptions>
     </el-card>
 
-    <el-card class="page-card info-tip-card" v-if="fromConsultation">
+    <el-card class="page-card info-tip-card" v-if="fromConsultation && !readonlyMode">
       <div class="tip-content">
         <el-icon><InfoFilled /></el-icon>
         <span>病历内容已从问诊记录同步，点击"AI优化病历"可生成规范病历</span>
@@ -47,7 +47,7 @@
                 v-model="form.chiefComplaint"
                 type="textarea"
                 :rows="2"
-                placeholder="请输入患者主诉"
+                :disabled="readonlyMode" placeholder="请输入患者主诉"
               />
               <!-- AI推荐结果 -->
               <div v-if="aiResults.chiefComplaint && !aiResultsTaken.chiefComplaint" class="ai-result-box">
@@ -70,7 +70,7 @@
                 v-model="form.presentIllness"
                 type="textarea"
                 :rows="2"
-                placeholder="请输入现病史"
+                :disabled="readonlyMode" placeholder="请输入现病史"
               />
               <!-- AI推荐结果 -->
               <div v-if="aiResults.presentIllness && !aiResultsTaken.presentIllness" class="ai-result-box">
@@ -95,7 +95,7 @@
                 v-model="form.pastHistory"
                 type="textarea"
                 :rows="2"
-                placeholder="请输入既往史"
+                :disabled="readonlyMode" placeholder="请输入既往史"
               />
               <!-- AI推荐结果 -->
               <div v-if="aiResults.pastHistory && !aiResultsTaken.pastHistory" class="ai-result-box">
@@ -118,7 +118,7 @@
                 v-model="form.physicalExamination"
                 type="textarea"
                 :rows="2"
-                placeholder="请输入体格检查结果"
+                :disabled="readonlyMode" placeholder="请输入体格检查结果"
               />
               <!-- AI推荐结果 -->
               <div v-if="aiResults.physicalExamination && !aiResultsTaken.physicalExamination" class="ai-result-box">
@@ -143,7 +143,7 @@
                 v-model="form.diagnosis"
                 type="textarea"
                 :rows="2"
-                placeholder="请输入诊断结果"
+                :disabled="readonlyMode" placeholder="请输入诊断结果"
               />
               <!-- AI推荐结果 -->
               <div v-if="aiResults.diagnosis && !aiResultsTaken.diagnosis" class="ai-result-box">
@@ -166,7 +166,7 @@
                 v-model="form.treatmentPlan"
                 type="textarea"
                 :rows="2"
-                placeholder="请输入治疗方案"
+                :disabled="readonlyMode" placeholder="请输入治疗方案"
               />
               <!-- AI推荐结果 -->
               <div v-if="aiResults.treatmentPlan && !aiResultsTaken.treatmentPlan" class="ai-result-box">
@@ -199,7 +199,7 @@ import { useRegistrationStore } from "@/stores/registration"
 import { useUserStore } from "@/stores/user"
 import type { MedicalRecordForm, RegistrationRecord } from "@/types"
 import { getConsultationRecord } from "@/api/doctor"
-import { optimizeMedicalRecord } from "@/api/medicalRecord"
+import { optimizeMedicalRecord, getMedicalRecordDetail } from "@/api/medicalRecord"
 
 const route = useRoute()
 const router = useRouter()
@@ -209,6 +209,9 @@ const userStore = useUserStore()
 
 const patientId = Number(route.params.patientId)
 const registrationId = Number(route.query.registrationId) || 0
+const medicalRecordId = Number(route.query.medicalRecordId) || 0
+const readonlyMode = !!(medicalRecordId) || route.query.readonly === "true"
+const fromAiGenerate = route.query.fromAiGenerate === "true"
 const patientName = ref("患者")
 const doctorName = ref(userStore.userName || "医生")
 const fromConsultation = ref(false)
@@ -254,6 +257,8 @@ onMounted(async () => {
   }
   await loadPatientInfo()
   await loadConsultationRecord()
+  if (fromAiGenerate) { loadAiGeneratedRecord() }
+  if (medicalRecordId) { loadSavedMedicalRecord() }
 })
 
 async function loadPatientInfo() {
@@ -372,11 +377,14 @@ async function saveRecord() {
     form.patientId = patientId
     form.doctorId = userStore.userId
     form.registrationId = registrationId || undefined
-    await recordStore.save(form)
+    const savedRecord = await recordStore.save(form)
     ElMessage.success("病历保存成功")
-    router.back()
+    // 导航回问诊页面并标记已保存
+    router.replace("/doctor/consultation/" + registrationId + "?saved=" + Date.now())
   } catch (e: any) {
-    ElMessage.error(e?.message || "保存失败")
+    console.error("保存病历失败", e)
+    var errMsg = e?.response?.data?.message || e?.message || "保存失败"
+    ElMessage.error(errMsg)
   } finally {
     saving.value = false
   }
@@ -384,6 +392,46 @@ async function saveRecord() {
 
 function goBack() {
   router.back()
+}
+
+async function loadSavedMedicalRecord() {
+  if (!medicalRecordId) return
+  try {
+    const res = await getMedicalRecordDetail(medicalRecordId)
+    if (res.code === 200 && res.data) {
+      const data = res.data
+      if (data.chiefComplaint) form.chiefComplaint = data.chiefComplaint
+      if (data.presentIllness) form.presentIllness = data.presentIllness
+      if (data.pastHistory) form.pastHistory = data.pastHistory
+      if (data.physicalExamination) form.physicalExamination = data.physicalExamination
+      if (data.diagnosis) form.diagnosis = data.diagnosis
+      if (data.treatmentPlan) form.treatmentPlan = data.treatmentPlan
+      ElMessage.success("已加载已保存的病历")
+    }
+  } catch (e) {
+    console.error("加载已保存病历失败", e)
+  }
+}
+
+function loadAiGeneratedRecord() {
+  try {
+    var stored = sessionStorage.getItem("aiGeneratedRecord")
+    if (stored) {
+      var data = JSON.parse(stored)
+      // 只填充AI推荐结果，不自动填入表单（用户点击"采纳"后才填入）
+      Object.keys(aiResultsTaken).forEach(function(key) { aiResultsTaken[key] = false })
+      if (data.chiefComplaint) aiResults.chiefComplaint = data.chiefComplaint
+      if (data.presentIllness) aiResults.presentIllness = data.presentIllness
+      if (data.pastHistory) aiResults.pastHistory = data.pastHistory
+      if (data.physicalExamination) aiResults.physicalExamination = data.physicalExamination
+      if (data.diagnosis) aiResults.diagnosis = data.diagnosis
+      if (data.treatmentPlan) aiResults.treatmentPlan = data.treatmentPlan
+      ElMessage.success("AI已根据对话生成病历内容，请查看AI推荐并点击采纳")
+      sessionStorage.removeItem("aiGeneratedRecord")
+    }
+  } catch (e) {
+    console.error("加载AI生成病历失败", e)
+  }
 }
 </script>
 

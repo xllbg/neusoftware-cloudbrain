@@ -113,6 +113,16 @@ public class MedicalRecordController {
         return CommonResult.success(responses);
     }
 
+    @GetMapping("/by-registration/{registrationId}")
+    @Operation(summary = "根据挂号ID获取病历", description = "根据挂号ID获取已保存的病历")
+    public CommonResult<MedicalRecordResponse> getByRegistration(@PathVariable Long registrationId) {
+        MedicalRecord record = medicalRecordService.getMedicalRecordByRegistration(registrationId);
+        if (record == null) {
+            return CommonResult.success(null);
+        }
+        return CommonResult.success(toResponse(record));
+    }
+
     @GetMapping("/detail/{id}")
     @Operation(summary = "病历详情", description = "获取病历详情")
     public CommonResult<MedicalRecordResponse> detail(@PathVariable Long id) {

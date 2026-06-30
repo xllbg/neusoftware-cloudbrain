@@ -77,7 +77,42 @@
       </el-form>
     </el-card>
 
-    <!-- AI审核结果弹窗 -->
+    
+    <!-- 历史处方记录 -->
+    <el-card class="page-card" style="margin-top: 16px">
+      <template #header>
+        <div class="card-header">
+          <span>历史处方记录</span>
+          <el-tag size="small" type="info" v-if="previousPrescriptions.length">{{ previousPrescriptions.length }} 条记录</el-tag>
+        </div>
+      </template>
+      <app-loading :visible="loadingHistory" />
+      <div v-if="previousPrescriptions.length === 0 && !loadingHistory" style="text-align:center;padding:20px;color:#999">
+        暂无历史处方记录
+      </div>
+      <el-table v-else :data="previousPrescriptions" border stripe size="small">
+        <el-table-column type="index" label="#" width="50" />
+        <el-table-column prop="createTime" label="开具时间" width="160">
+          <template #default="{ row }">{{ row.createTime || row.createdAt || "-" }}</template>
+        </el-table-column>
+        <el-table-column label="药品" min-width="200">
+          <template #default="{ row }">
+            <span v-if="row.medicineList">
+              <el-tag v-for="(med, idx) in (typeof row.medicineList === 'string' ? JSON.parse(row.medicineList) : row.medicineList)" :key="idx" size="small" style="margin: 2px">{{ med.name || med }}</el-tag>
+            </span>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="dosage" label="用量" width="80" />
+        <el-table-column prop="status" label="状态" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 'completed' ? 'success' : 'primary'" size="small">{{ row.status === 'completed' ? '已完成' : '使用中' }}</el-tag>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
+<!-- AI审核结果弹窗 -->
     <el-dialog v-model="checkDialogVisible" title="AI 处方审核结果" width="700px" :close-on-click-modal="false">
       <div v-if="checking" class="checking-status">
         <el-icon class="is-loading"><Loading /></el-icon>
@@ -171,6 +206,8 @@ const patientName = ref("患者")
 const doctorName = ref(userStore.userName || "医生")
 const currentRecord = ref<RegistrationRecord | null>(null)
 const currentPatientInfo = ref<{ age?: number; gender?: string } | null>(null)
+const previousPrescriptions = ref<any[]>([])
+const loadingHistory = ref(false)
 
 const submitting = ref(false)
 const checking = ref(false)
@@ -223,6 +260,19 @@ async function loadPatientInfo(pid: number) {
     }
   } catch (e) {
     console.error("加载患者信息失败", e)
+  }
+}
+
+async function fetchPrescriptionHistory() {
+  if (!patientId) return
+  loadingHistory.value = true
+  try {
+    const res = await prescriptionStore.fetchList({ patientId })
+    previousPrescriptions.value = res || []
+  } catch (e) {
+    console.error("加载历史处方失败", e)
+  } finally {
+    loadingHistory.value = false
   }
 }
 

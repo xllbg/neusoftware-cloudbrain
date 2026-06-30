@@ -5,19 +5,23 @@
         <el-icon><ArrowLeft /></el-icon>
         返回列表
       </el-button>
-      <h2 class="page-title">问诊</h2>
       <div class="header-actions">
+        <el-button size="small" @click="goToHistory"><el-icon><Document /></el-icon>历史记录</el-button>
         <el-button type="warning" @click="completeConsultation" :disabled="record?.status === 'completed'">
           <el-icon><Check /></el-icon>
           完成问诊
         </el-button>
-        <el-button type="primary" @click="goToMedicalRecord">
+        <el-button type="primary" @click="viewMedicalRecord" :disabled="generatingRecord">
           <el-icon><Notebook /></el-icon>
-          生成病历
+          {{ medicalRecordId || consultationRecordId || recordGenerated ? '查看病例' : '生成病历' }}
         </el-button>
         <el-button type="success" @click="goToPrescription">
           <el-icon><Document /></el-icon>
           开具处方
+        </el-button>
+        <el-button type="danger" @click="generateMedicalRecordFromChat" :loading="generatingRecord" :disabled="recordGenerated">
+          <el-icon><MagicStick /></el-icon>
+          AI生成病历
         </el-button>
       </div>
     </div>
@@ -46,19 +50,6 @@
         </template>
 
         <div class="chat-container">
-          <!-- 患者自述症状（固定在聊天顶部） -->
-          <div class="patient-symptom-banner">
-            <div class="symptom-label">
-              <el-icon><Warning /></el-icon>
-              <span>患者自述症状</span>
-            </div>
-            <div class="symptom-content">{{ record?.symptom || "无" }}</div>
-            <div v-if="record?.triageResult" class="triage-result">
-              <el-icon><DataAnalysis /></el-icon>
-              <span>AI分诊：{{ record.triageResult }}</span>
-            </div>
-          </div>
-
           <!-- 聊天消息列表 -->
           <div class="message-list" ref="messageListRef">
             <div
@@ -96,196 +87,37 @@
               :disabled="isCompleted"
               @keydown.enter.exact="handleSendMessage"
             />
-            <div class="input-actions">
-              <el-button type="primary" @click="handleSendMessage" :loading="sendingMessage" :disabled="isCompleted || !inputMessage.trim()">
-                <el-icon><Promotion /></el-icon>
-                发送
-              </el-button>
+            <div class="sender-toggle">
+              <span class="toggle-label">消息发送者：</span>
+              <el-radio-group v-model="senderType" size="small">
+                <el-radio-button value="DOCTOR"><el-icon><User /></el-icon>医生</el-radio-button>
+                <el-radio-button value="PATIENT"><el-icon><UserFilled /></el-icon>患者</el-radio-button>
+              </el-radio-group>
+            </div>
+            <div class="input-toolbar">
+              <div class="toolbar-left">
+                <el-button size="small" :type="isListening ? 'danger' : 'default'" @click="toggleVoiceInput" :disabled="isCompleted">
+                  <el-icon><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg></el-icon>{{ isListening ? '停止录音' : '语音输入' }}</el-button>
+                <span v-if="voiceTranscript" class="voice-hint">{{ voiceTranscript }}</span>
+              </div>
+              <div class="toolbar-right">
+                <el-button type="primary" @click="handleSendMessage" :loading="sendingMessage" :disabled="isCompleted || !inputMessage.trim()">
+                  <el-icon><Promotion /></el-icon>
+                  发送
+                </el-button>
+              </div>
             </div>
           </div>
         </div>
-      </el-card>
-
-      <!-- 右侧问诊记录表单 -->
-      <el-card class="record-card">
-        <template #header>
-          <div class="card-header">
-            <span>问诊记录</span>
-            <div class="header-actions">
-              <el-button
-                type="primary"
-                size="small"
-                @click="handleAiRecommend"
-                :loading="aiRecommending"
-                :disabled="isCompleted"
-              >
-                <el-icon><MagicStick /></el-icon>
-                AI推荐疗法
-              </el-button>
-              <el-button size="small" @click="resetForm" v-if="!isCompleted">重置</el-button>
-            </div>
-          </div>
-        </template>
-
-        <el-form :model="consultForm" label-width="90px" class="consult-form">
-          <!-- 现病史 -->
-          <el-form-item label="现病史">
-            <el-input
-              v-model="consultForm.presentIllness"
-              type="textarea"
-              :rows="2"
-              placeholder="请详细描述患者本次发病经过、主要症状、伴随症状等"
-              :disabled="isCompleted"
-            />
-            <div v-if="aiResults.presentIllness && !aiResultsTaken.presentIllness" class="ai-result-box">
-              <div class="ai-result-label">
-                <el-icon><MagicStick /></el-icon>
-                <span>AI推荐</span>
-              </div>
-              <div class="ai-result-content">{{ aiResults.presentIllness }}</div>
-              <div class="ai-result-actions">
-                <el-button type="primary" size="small" @click="takeAiResult('presentIllness')">
-                  采纳
-                </el-button>
-              </div>
-            </div>
-          </el-form-item>
-
-          <!-- 既往史 -->
-          <el-form-item label="既往史">
-            <el-input
-              v-model="consultForm.pastHistory"
-              type="textarea"
-              :rows="2"
-              placeholder="请描述患者既往病史、过敏史、手术史等"
-              :disabled="isCompleted"
-            />
-            <div v-if="aiResults.pastHistory && !aiResultsTaken.pastHistory" class="ai-result-box">
-              <div class="ai-result-label">
-                <el-icon><MagicStick /></el-icon>
-                <span>AI推荐</span>
-              </div>
-              <div class="ai-result-content">{{ aiResults.pastHistory }}</div>
-              <div class="ai-result-actions">
-                <el-button type="primary" size="small" @click="takeAiResult('pastHistory')">
-                  采纳
-                </el-button>
-              </div>
-            </div>
-          </el-form-item>
-
-          <!-- 体格检查 -->
-          <el-form-item label="体格检查">
-            <el-input
-              v-model="consultForm.physicalExamination"
-              type="textarea"
-              :rows="2"
-              placeholder="请描述体温、血压、心率等体格检查结果"
-              :disabled="isCompleted"
-            />
-            <div v-if="aiResults.physicalExamination && !aiResultsTaken.physicalExamination" class="ai-result-box">
-              <div class="ai-result-label">
-                <el-icon><MagicStick /></el-icon>
-                <span>AI推荐</span>
-              </div>
-              <div class="ai-result-content">{{ aiResults.physicalExamination }}</div>
-              <div class="ai-result-actions">
-                <el-button type="primary" size="small" @click="takeAiResult('physicalExamination')">
-                  采纳
-                </el-button>
-              </div>
-            </div>
-          </el-form-item>
-
-          <!-- 初步诊断 + 主诉 -->
-          <el-row :gutter="10">
-            <el-col :span="12">
-              <el-form-item label="初步诊断">
-                <el-input
-                  v-model="consultForm.diagnosis"
-                  placeholder="请输入初步诊断"
-                  :disabled="isCompleted"
-                />
-                <div v-if="aiResults.diagnosis && !aiResultsTaken.diagnosis" class="ai-result-box">
-                  <div class="ai-result-label">
-                    <el-icon><MagicStick /></el-icon>
-                    <span>AI推荐</span>
-                  </div>
-                  <div class="ai-result-content">{{ aiResults.diagnosis }}</div>
-                  <div class="ai-result-actions">
-                    <el-button type="primary" size="small" @click="takeAiResult('diagnosis')">
-                      采纳
-                    </el-button>
-                  </div>
-                </div>
-              </el-form-item>
-            </el-col>
-            <el-col :span="12">
-              <el-form-item label="主诉">
-                <el-input
-                  v-model="consultForm.chiefComplaint"
-                  placeholder="请输入主诉"
-                  :disabled="isCompleted"
-                />
-                <div v-if="aiResults.chiefComplaint && !aiResultsTaken.chiefComplaint" class="ai-result-box">
-                  <div class="ai-result-label">
-                    <el-icon><MagicStick /></el-icon>
-                    <span>AI推荐</span>
-                  </div>
-                  <div class="ai-result-content">{{ aiResults.chiefComplaint }}</div>
-                  <div class="ai-result-actions">
-                    <el-button type="primary" size="small" @click="takeAiResult('chiefComplaint')">
-                      采纳
-                    </el-button>
-                  </div>
-                </div>
-              </el-form-item>
-            </el-col>
-          </el-row>
-
-          <!-- 治疗意见 -->
-          <el-form-item label="治疗意见">
-            <el-input
-              v-model="consultForm.treatmentPlan"
-              type="textarea"
-              :rows="2"
-              placeholder="请输入治疗意见、注意事项等"
-              :disabled="isCompleted"
-            />
-            <div v-if="aiResults.treatmentPlan && !aiResultsTaken.treatmentPlan" class="ai-result-box">
-              <div class="ai-result-label">
-                <el-icon><MagicStick /></el-icon>
-                <span>AI推荐</span>
-              </div>
-              <div class="ai-result-content">{{ aiResults.treatmentPlan }}</div>
-              <div class="ai-result-actions">
-                <el-button type="primary" size="small" @click="takeAiResult('treatmentPlan')">
-                  采纳
-                </el-button>
-              </div>
-            </div>
-          </el-form-item>
-
-          <el-row v-if="!isCompleted">
-            <el-col :span="24">
-              <div class="form-actions">
-                <el-button type="primary" @click="handleSave" :loading="saving">
-                  <el-icon><Check /></el-icon>
-                  保存问诊记录
-                </el-button>
-              </div>
-            </el-col>
-          </el-row>
-        </el-form>
       </el-card>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, nextTick } from "vue"
-import { useRoute, useRouter } from "vue-router"
-import { ArrowLeft, Notebook, Document, Check, Warning, DataAnalysis, MagicStick, Promotion } from "@element-plus/icons-vue"
+import { ref, reactive, computed, onMounted, onUnmounted, nextTick, watch } from "vue"
+import { useRoute, useRouter, onBeforeRouteUpdate } from "vue-router"
+import { ArrowLeft, Notebook, Document, Check, Warning, DataAnalysis, MagicStick, Promotion, User, UserFilled } from "@element-plus/icons-vue"
 import { ElMessage, ElMessageBox } from "element-plus"
 import { useRegistrationStore } from "@/stores/registration"
 import { useUserStore } from "@/stores/user"
@@ -298,7 +130,6 @@ import {
   type ConsultationRecordRecommendData,
 } from "@/api/doctor"
 import { sendConsultationMessage, getConsultationMessages } from "@/api/consultation"
-
 const route = useRoute()
 const router = useRouter()
 const regStore = useRegistrationStore()
@@ -307,15 +138,24 @@ const userStore = useUserStore()
 const loading = ref(false)
 const saving = ref(false)
 const aiRecommending = ref(false)
+const generatingRecord = ref(false)
+const recordGenerated = ref(false)
 const sendingMessage = ref(false)
 const record = ref<RegistrationRecord | null>(null)
 const consultationRecordId = ref<number | null>(null)
+const medicalRecordId = ref<number | null>(null)
 const registrationId = Number(route.params.registrationId)
 const messageListRef = ref<HTMLElement | null>(null)
 
 // 聊天消息
 const messages = ref<ConsultationMessage[]>([])
 const inputMessage = ref("")
+const senderType = ref("DOCTOR")
+const isListening = ref(false)
+const voiceTranscript = ref("")
+const recognition = ref<any>(null)
+const voiceBusy = ref(false)
+const voiceTimeout = ref<any>(null)
 
 // AI推荐结果
 const aiResults = reactive({
@@ -368,6 +208,7 @@ async function loadRecord() {
       }
     }
     await loadConsultationRecord()
+    await checkMedicalRecord()
   } finally {
     loading.value = false
   }
@@ -392,6 +233,21 @@ async function loadConsultationRecord() {
   }
 }
 
+async function checkMedicalRecord() {
+  if (!registrationId || !record.value?.patientId) return
+  try {
+    const { getMedicalRecordList } = await import("@/api/medicalRecord")
+    const res = await getMedicalRecordList({ patientId: record.value.patientId })
+    const list = res || []
+    const match = list.find((r: any) => r.registrationId === registrationId)
+    if (match) {
+      medicalRecordId.value = match.id
+    }
+  } catch (e) {
+    // 没有病历记录是正常情况
+  }
+}
+
 async function loadMessages() {
   if (!registrationId) return
   try {
@@ -412,21 +268,60 @@ function scrollToBottom() {
   }
 }
 
-async function handleSendMessage() {
-  if (!inputMessage.value.trim() || !userStore.userId || !record.value) return
+function toggleVoiceInput() {
+  if (isListening.value) {
+    isListening.value = false
+    if (voiceTimeout.value) { clearTimeout(voiceTimeout.value); voiceTimeout.value = null }
+    if (recognition.value) {
+      try { recognition.value.onend = null; recognition.value.onresult = null; recognition.value.onerror = null; recognition.value.stop() } catch(e) {}
+      recognition.value = null
+    }
+    return
+  }
+  if (voiceBusy.value) return
+  voiceBusy.value = true
+  const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+  if (!SR) { ElMessage.warning("当前浏览器不支持语音识别，请用Chrome或Edge"); voiceBusy.value = false; return }
+  try {
+    const rec = new SR()
+    rec.lang = "zh-CN"; rec.continuous = true; rec.interimResults = true; rec.maxAlternatives = 1
+    rec.onresult = function(event) {
+      let interimT = ""; let finalT = ""
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) finalT += event.results[i][0].transcript
+        else interimT += event.results[i][0].transcript
+      }
+      if (interimT) voiceTranscript.value = interimT
+      if (finalT) { voiceTranscript.value = finalT; inputMessage.value = (inputMessage.value || "") + finalT }
+    }
+    rec.onerror = function() { isListening.value = false; voiceBusy.value = false; recognition.value = null }
+    rec.onend = function() { isListening.value = false; voiceBusy.value = false; recognition.value = null }
+    rec.start()
+    recognition.value = rec; isListening.value = true; voiceBusy.value = false
+    voiceTimeout.value = setTimeout(function() {
+      if (isListening.value) { isListening.value = false; voiceBusy.value = false; try { rec.stop() } catch(e) {}; recognition.value = null }
+    }, 15000)
+  } catch (e) { isListening.value = false; voiceBusy.value = false; recognition.value = null; ElMessage.warning("语音启动失败，可直接打字发送") }
+}
 
+async function handleSendMessage() {
+  if (!inputMessage.value.trim() || isCompleted.value) return
   sendingMessage.value = true
   try {
+    let senderId = userStore.userId
+    if (senderType.value === "PATIENT" && record.value) {
+      senderId = record.value.patientId
+    }
     const res = await sendConsultationMessage({
       registrationId: registrationId,
-      senderType: "DOCTOR",
-      senderId: userStore.userId,
+      senderType: senderType.value,
+      senderId: senderId,
       content: inputMessage.value.trim(),
     })
-
     if (res.code === 200 && res.data) {
       messages.value.push(res.data)
       inputMessage.value = ""
+      voiceTranscript.value = ""
       await nextTick()
       scrollToBottom()
     }
@@ -460,7 +355,7 @@ async function handleSave() {
 
   saving.value = true
   try {
-    await saveConsultationRecord({
+    const saveRes = await saveConsultationRecord({
       registrationId: registrationId,
       patientId: record.value.patientId,
       doctorId: userStore.userId,
@@ -472,6 +367,9 @@ async function handleSave() {
       treatmentPlan: consultForm.treatmentPlan,
       aiRecommended: false,
     })
+    if (saveRes.code === 200 && saveRes.data && saveRes.data.id) {
+      consultationRecordId.value = saveRes.data.id
+    }
     ElMessage.success("问诊记录保存成功")
   } catch (e: any) {
     ElMessage.error(e?.message || "保存失败")
@@ -562,12 +460,49 @@ async function completeConsultation() {
   }
 }
 
+async function generateMedicalRecordFromChat() {
+  if (messages.value.length === 0) { ElMessage.warning("暂无对话内容，无法生成病历"); return }
+  if (!record.value) { ElMessage.warning("缺少患者信息"); return }
+  generatingRecord.value = true
+  try {
+    var conversationText = messages.value.map(function(m) { return m.senderName + "(" + (m.senderType === "DOCTOR" ? "医生" : "患者") + "): " + m.content }).join("\n")
+    var res = await fetch("/api/medical-record/generate?patientId=" + record.value.patientId, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dialogueText: conversationText })
+    })
+    var data = await res.json()
+    if (data.code === 200 && data.data) {
+      sessionStorage.setItem("aiGeneratedRecord", JSON.stringify(data.data))
+      recordGenerated.value = true
+      ElMessage.success("AI病历生成成功，正在跳转...")
+      router.push({ path: "/doctor/medical-record/" + record.value.patientId, query: { registrationId: record.value.id, fromAiGenerate: true } })
+    } else {
+      ElMessage.error(data.message || "AI生成病历失败")
+    }
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.message || e.message || "AI生成病历失败，请检查网络连接")
+  } finally { generatingRecord.value = false }
+}
+
 function goToMedicalRecord() {
   if (record.value) {
     router.push(`/doctor/medical-record/${record.value.patientId}?registrationId=${record.value.id}`)
   }
 }
-
+function viewMedicalRecord() {
+  if (!record.value || !record.value.patientId) {
+    ElMessage.warning("数据加载中，请稍候");
+    return
+  }
+  var readonly = medicalRecordId.value || consultationRecordId.value || recordGenerated.value ? "true" : ""
+  var pid = record.value.patientId
+  var rid = record.value.id || registrationId
+  var target = medicalRecordId.value
+    ? `/doctor/medical-record/${pid}?registrationId=${rid}&medicalRecordId=${medicalRecordId.value}`
+    : `/doctor/medical-record/${pid}?registrationId=${rid}` + (readonly ? `&readonly=${readonly}` : "")
+  router.push(target)
+}
 function goToPrescription() {
   if (record.value) {
     router.push(`/doctor/prescription/${record.value.patientId}?registrationId=${record.value.id}`)
@@ -577,6 +512,30 @@ function goToPrescription() {
 function goBack() {
   router.push("/doctor/patients")
 }
+
+function goToHistory() {
+  router.push("/doctor/history")
+}
+
+
+let pollTimer = null
+onMounted(() => {
+  if (record.value?.status !== "completed") {
+    pollTimer = setInterval(() => { loadMessages() }, 5000)
+  }
+})
+// 监听路由变化（保存病历后返回时重新检查）
+onBeforeRouteUpdate((to) => {
+  if (to.query.saved) {
+    setTimeout(() => checkMedicalRecord(), 500)
+  }
+})
+
+onUnmounted(() => {
+  if (voiceTimeout.value) { clearTimeout(voiceTimeout.value); voiceTimeout.value = null }
+  if (recognition.value) { try { recognition.value.onend = null; recognition.value.onresult = null; recognition.value.onerror = null; recognition.value.abort() } catch(e) {}; recognition.value = null }
+  if (pollTimer) clearInterval(pollTimer)
+})
 </script>
 
 <style scoped>
@@ -630,36 +589,6 @@ function goBack() {
 }
 
 /* 患者自述横幅 */
-.patient-symptom-banner {
-  padding: 12px 16px;
-  background: linear-gradient(135deg, #fff9e6 0%, #fef0f0 100%);
-  border-radius: 8px;
-  margin-bottom: 12px;
-  border-left: 4px solid #e6a23c;
-}
-.symptom-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #e6a23c;
-  margin-bottom: 6px;
-}
-.symptom-content {
-  font-size: 14px;
-  color: #606266;
-  line-height: 1.6;
-  white-space: pre-wrap;
-}
-.triage-result {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 8px;
-  font-size: 12px;
-  color: #409eff;
-}
 
 /* 消息列表 */
 .message-list {
