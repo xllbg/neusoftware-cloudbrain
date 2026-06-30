@@ -3,7 +3,7 @@ package com.neusoft.cloudbrain.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -17,13 +17,13 @@ import java.time.LocalDate;
 public class RegistrationRequest {
 
     @NotNull(message = "患者ID不能为空")
-    @Positive(message = "患者ID必须为正数")
+    @PositiveOrZero(message = "患者ID必须为正数")
     @Schema(description = "患者ID", example = "1")
     private Long patientId;
 
     @NotNull(message = "医生ID不能为空")
-    @Positive(message = "医生ID必须为正数")
-    @Schema(description = "医生ID", example = "3")
+    @PositiveOrZero(message = "医生ID不能为负数")
+    @Schema(description = "医生ID，急诊科挂号传0", example = "3")
     private Long doctorId;
 
     @NotBlank(message = "科室不能为空")

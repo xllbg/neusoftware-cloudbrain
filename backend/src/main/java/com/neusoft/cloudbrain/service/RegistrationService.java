@@ -36,14 +36,18 @@ public class RegistrationService {
         Patient patient = patientRepository.findById(request.getPatientId())
                 .orElseThrow(() -> new BusinessException(404, "患者不存在"));
 
-        // 校验医生存在
-        Doctor doctor = doctorRepository.findById(request.getDoctorId())
-                .orElseThrow(() -> new BusinessException(404, "医生不存在"));
+        // 校验医生存在（急诊科 doctorId=0 跳过校验）
+        Doctor doctor = null;
+        if (request.getDoctorId() != null && request.getDoctorId() > 0) {
+            doctor = doctorRepository.findById(request.getDoctorId())
+                    .orElseThrow(() -> new BusinessException(404, "医生不存在"));
+        }
 
         // 创建挂号记录
         Registration registration = new Registration();
         registration.setPatientId(request.getPatientId());
-        registration.setDoctorId(request.getDoctorId());
+        // 急诊科 doctorId=0 转为 null 存储（表示待分配医生）
+        registration.setDoctorId(request.getDoctorId() != null && request.getDoctorId() > 0 ? request.getDoctorId() : null);
         registration.setDepartment(request.getDepartment());
         registration.setRegistrationDate(request.getRegistrationDate());
         registration.setTimeSlot(request.getTimeSlot());
@@ -58,7 +62,7 @@ public class RegistrationService {
                 .patientId(saved.getPatientId())
                 .patientName(patient.getName())
                 .doctorId(saved.getDoctorId())
-                .doctorName(doctor.getName())
+                .doctorName(doctor != null ? doctor.getName() : "急诊科（待分配）")
                 .department(saved.getDepartment())
                 .registrationDate(saved.getRegistrationDate())
                 .timeSlot(saved.getTimeSlot())
@@ -75,10 +79,12 @@ public class RegistrationService {
 
         return registrations.stream()
                 .map(reg -> {
-                    Doctor doctor = doctorRepository.findById(reg.getDoctorId()).orElse(null);
+                    Long doctorId = reg.getDoctorId();
+                    Doctor doctor = (doctorId != null) ? doctorRepository.findById(doctorId).orElse(null) : null;
+                    String doctorName = doctor != null ? doctor.getName() : (doctorId == null ? "急诊科（待分配）" : "未知");
                     return RegistrationResponse.RegistrationListItem.builder()
                             .id(reg.getId())
-                            .doctorName(doctor != null ? doctor.getName() : "未知")
+                            .doctorName(doctorName)
                             .department(reg.getDepartment())
                             .doctorTitle(doctor != null ? doctor.getTitle() : "")
                             .hospital(doctor != null ? doctor.getHospital() : "")
@@ -156,13 +162,13 @@ public class RegistrationService {
         Registration saved = registrationRepository.save(registration);
         log.info("挂号取消成功 - 挂号ID: {}", registrationId);
 
-        Doctor doctor = doctorRepository.findById(saved.getDoctorId()).orElse(null);
+        Doctor doctor = saved.getDoctorId() != null ? doctorRepository.findById(saved.getDoctorId()).orElse(null) : null;
 
         return RegistrationResponse.builder()
                 .id(saved.getId())
                 .patientId(saved.getPatientId())
                 .doctorId(saved.getDoctorId())
-                .doctorName(doctor != null ? doctor.getName() : "未知")
+                .doctorName(doctor != null ? doctor.getName() : (saved.getDoctorId() == null ? "急诊科（待分配）" : "未知"))
                 .department(saved.getDepartment())
                 .registrationDate(saved.getRegistrationDate())
                 .timeSlot(saved.getTimeSlot())
@@ -178,7 +184,10 @@ public class RegistrationService {
         Registration registration = registrationRepository.findById(registrationId)
                 .orElseThrow(() -> new BusinessException(404, "挂号记录不存在"));
 
-        if (!registration.getDoctorId().equals(doctorId)) {
+        if (registration.getDoctorId() == null) {
+            // 急诊科挂号（doctorId为null），任何医生都可以接诊
+            registration.setDoctorId(doctorId);
+        } else if (!registration.getDoctorId().equals(doctorId)) {
             throw new BusinessException(403, "无权接诊此挂号");
         }
 
@@ -213,7 +222,7 @@ public class RegistrationService {
         Registration registration = registrationRepository.findById(registrationId)
                 .orElseThrow(() -> new BusinessException(404, "挂号记录不存在"));
 
-        if (!registration.getDoctorId().equals(doctorId)) {
+        if (registration.getDoctorId() == null || !registration.getDoctorId().equals(doctorId)) {
             throw new BusinessException(403, "无权操作此挂号");
         }
 
