@@ -773,6 +773,10 @@ function goBack() {
   border: 1px solid #91d5ff;
   border-radius: 6px;
 }
+.ai-result-box--warning {
+  background: #fff9e6;
+  border-color: #e6a23c;
+}
 .ai-result-label {
   display: flex;
   align-items: center;
@@ -781,6 +785,9 @@ function goBack() {
   color: #1890ff;
   font-weight: 500;
   margin-bottom: 6px;
+}
+.ai-result-label--warning {
+  color: #b8860b;
 }
 .ai-result-content {
   font-size: 13px;

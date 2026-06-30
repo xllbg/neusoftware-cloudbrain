@@ -164,8 +164,8 @@
           <div class="section-content">{{ currentConsultation.physicalExamination || '无' }}</div>
         </div>
         <div class="record-section">
-          <div class="section-label highlight">初步诊断</div>
-          <div class="section-content diagnosis-content">{{ currentConsultation.diagnosis || '无' }}</div>
+          <div class="section-label ">初步诊断</div>
+          <div class="section-content ">{{ currentConsultation.diagnosis || '无' }}</div>
         </div>
         <div class="record-section">
           <div class="section-label">治疗意见</div>
@@ -393,7 +393,7 @@
         <!-- 初步诊断 -->
         <div class="record-section">
           <div class="section-label">初步诊断（Preliminary Diagnosis）</div>
-          <div class="section-content highlight">
+          <div class="section-content">
             {{ currentRecord.diagnosis || '无' }}
           </div>
         </div>
@@ -469,7 +469,8 @@ const currentCheckResult = ref<AiCheckResult | null>(null)
 // 解析药品列表
 const parsedMedicineList = ref<any[]>([])
 
-// 病历搜索
+const recordDialogVisible = ref(false)
+const currentRecord = ref<MedicalRecord | null>(null)
 const recordSearchKeyword = ref("")
 const consultSearchKeyword = ref("")
 const prescSearchKeyword = ref("")
@@ -782,17 +783,6 @@ function getCheckResultType(result: string | undefined): "success" | "warning" |
   background: #fff;
 }
 
-.section-content.highlight {
-  background: #fff9e6;
-  font-weight: 500;
-  color: #b8860b;
-}
-
-.diagnosis-content {
-  background: #fff9e6;
-  font-weight: 500;
-  color: #b8860b;
-}
 
 .source-tag {
   margin-top: 20px;
