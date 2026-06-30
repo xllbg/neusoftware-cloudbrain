@@ -26,7 +26,7 @@ public class Registration {
     @Column(name = "patient_id", nullable = false)
     private Long patientId;
 
-    @Column(name = "doctor_id", nullable = false)
+    @Column(name = "doctor_id", nullable = true)
     private Long doctorId;
 
     @Column(nullable = false, length = 50)

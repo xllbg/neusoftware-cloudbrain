@@ -116,7 +116,7 @@ public class RegistrationService {
                 // 检查是否已存在于列表中（避免重复）
                 boolean exists = registrations.stream().anyMatch(r -> r.getId().equals(reg.getId()));
                 // 只添加待分配的挂号（doctorId为NULL）
-                if (!exists && reg.getDoctorId() == null) {
+                if (!exists) {
                     registrations.add(reg);
                 }
             }
