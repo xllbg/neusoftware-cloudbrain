@@ -61,9 +61,15 @@ public class MedicalRecordService {
     }
 
     public Map<String, Object> generateMedicalRecordByAi(Long patientId, String dialogueText) {
-        log.info("AI生成病历 - 患者ID: {}, 对话文本: {}", patientId, dialogueText);
+        return generateMedicalRecordByAi(patientId, dialogueText, null, null);
+    }
 
-        String aiResult = aiService.generateMedicalRecord(dialogueText);
+    public Map<String, Object> generateMedicalRecordByAi(Long patientId, String dialogueText, 
+            String symptoms, String department) {
+        log.info("AI生成病历 - 患者ID: {}, 对话文本长度: {}", patientId, dialogueText != null ? dialogueText.length() : 0);
+        log.info("患者自述症状: {}, 科室: {}", symptoms, department);
+
+        String aiResult = aiService.generateMedicalRecordWithSymptoms(dialogueText, symptoms, department);
 
         Map<String, Object> result = parseAiMedicalRecordResult(aiResult);
         result.put("patientId", patientId);
@@ -133,6 +139,41 @@ public class MedicalRecordService {
         } catch (Exception e) {
             log.error("解析AI病历结果失败: {}", e.getMessage());
             log.debug("原始AI结果: {}", aiResult);
+        }
+
+        return result;
+    }
+
+    public Map<String, Object> optimizeMedicalRecord(String chiefComplaint, String presentIllness,
+            String pastHistory, String physicalExamination, String diagnosis,
+            String treatmentPlan) {
+        log.info("AI优化病历");
+
+        String aiResult = aiService.optimizeMedicalRecord(
+                chiefComplaint, presentIllness, pastHistory,
+                physicalExamination, diagnosis, treatmentPlan);
+
+        Map<String, Object> result = parseAiMedicalRecordResult(aiResult);
+
+        try {
+            String jsonStr = aiResult.trim();
+            if (jsonStr.startsWith("```json")) {
+                jsonStr = jsonStr.substring(7);
+            }
+            if (jsonStr.startsWith("```")) {
+                jsonStr = jsonStr.substring(3);
+            }
+            if (jsonStr.endsWith("```")) {
+                jsonStr = jsonStr.substring(0, jsonStr.length() - 3);
+            }
+            jsonStr = jsonStr.trim();
+
+            JsonNode root = objectMapper.readTree(jsonStr);
+            if (root.has("chiefComplaint")) {
+                result.put("chiefComplaint", root.path("chiefComplaint").asText(""));
+            }
+        } catch (Exception e) {
+            log.warn("解析chiefComplaint失败: {}", e.getMessage());
         }
 
         return result;

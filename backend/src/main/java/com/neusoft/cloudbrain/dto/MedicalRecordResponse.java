@@ -62,6 +62,9 @@ public class MedicalRecordResponse {
     @AllArgsConstructor
     @Builder
     public static class AiMedicalRecordResult {
+        @Schema(description = "主诉", example = "胸痛伴气短3小时")
+        private String chiefComplaint;
+
         @Schema(description = "现病史", example = "患者3小时前无明显诱因出现胸痛...")
         private String presentIllness;
 

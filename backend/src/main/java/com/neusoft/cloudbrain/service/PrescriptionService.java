@@ -119,4 +119,8 @@ public class PrescriptionService {
 
         return saved;
     }
+
+    public PrescriptionCheck getCheckResult(Long prescriptionId) {
+        return prescriptionCheckRepository.findByPrescriptionId(prescriptionId).orElse(null);
+    }
 }

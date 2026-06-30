@@ -1,7 +1,7 @@
 import { defineStore } from "pinia"
 import { ref } from "vue"
 import type { PrescriptionRecord, PrescriptionForm, AiCheckResult, PrescriptionMedicineItem } from "@/types"
-import { createPrescription, getPrescriptionList, getPrescriptionDetail, checkPrescription, recommendMedicine } from "@/api/prescription"
+import { createPrescription, getPrescriptionList, getPrescriptionDetail, checkPrescription, recommendMedicine, aiCheckPrescription, getPrescriptionCheckResult } from "@/api/prescription"
 
 export const usePrescriptionStore = defineStore("prescription", () => {
   const records = ref<PrescriptionRecord[]>([])
@@ -45,10 +45,39 @@ export const usePrescriptionStore = defineStore("prescription", () => {
     return res.data as AiCheckResult
   }
 
-  async function recommend(params: { symptoms?: string; diagnosis?: string; department?: string }) {
+  async function checkWithAi(medicineText: string, patientInfo: string): Promise<AiCheckResult> {
+    const res = await aiCheckPrescription(medicineText, patientInfo)
+    return res.data as AiCheckResult
+  }
+
+  async function recommend(params: { symptoms?: string; diagnosis?: string; department?: string; registrationId?: number }) {
     const res = await recommendMedicine(params)
     return res.data as PrescriptionMedicineItem[]
   }
 
-  return { records, currentRecord, loading, fetchList, fetchDetail, create, check, recommend }
+  async function saveCheckResult(data: {
+    prescriptionId: number
+    checkResult: string
+    medicationSuggestions: string
+    interactionDetection: string
+    riskLevel: string
+    riskHints: string
+  }) {
+    const res = await fetch("/api/prescription/save-check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    })
+    return res.json()
+  }
+
+  async function getCheckResult(prescriptionId: number): Promise<AiCheckResult | null> {
+    const res = await getPrescriptionCheckResult(prescriptionId)
+    if (res.code === 200 && res.data) {
+      return res.data as AiCheckResult
+    }
+    return null
+  }
+
+  return { records, currentRecord, loading, fetchList, fetchDetail, create, check, checkWithAi, recommend, saveCheckResult, getCheckResult }
 })

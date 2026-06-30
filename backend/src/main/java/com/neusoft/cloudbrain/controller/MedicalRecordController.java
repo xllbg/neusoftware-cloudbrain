@@ -49,6 +49,34 @@ public class MedicalRecordController {
         return CommonResult.success(aiResult);
     }
 
+    @PostMapping("/optimize")
+    @Operation(summary = "AI优化病历", description = "根据问诊记录AI优化生成规范病历")
+    public CommonResult<MedicalRecordResponse.AiMedicalRecordResult> optimize(
+            @RequestBody Map<String, String> request) {
+        String chiefComplaint = request.getOrDefault("chiefComplaint", "");
+        String presentIllness = request.getOrDefault("presentIllness", "");
+        String pastHistory = request.getOrDefault("pastHistory", "");
+        String physicalExamination = request.getOrDefault("physicalExamination", "");
+        String diagnosis = request.getOrDefault("diagnosis", "");
+        String treatmentPlan = request.getOrDefault("treatmentPlan", "");
+
+        Map<String, Object> result = medicalRecordService.optimizeMedicalRecord(
+                chiefComplaint, presentIllness, pastHistory,
+                physicalExamination, diagnosis, treatmentPlan);
+
+        MedicalRecordResponse.AiMedicalRecordResult aiResult = MedicalRecordResponse.AiMedicalRecordResult.builder()
+                .chiefComplaint((String) result.getOrDefault("chiefComplaint", ""))
+                .presentIllness((String) result.get("presentIllness"))
+                .pastHistory((String) result.get("pastHistory"))
+                .physicalExamination((String) result.get("physicalExamination"))
+                .diagnosis((String) result.get("diagnosis"))
+                .treatmentPlan((String) result.get("treatmentPlan"))
+                .aiRawResult((String) result.get("aiRawResult"))
+                .build();
+
+        return CommonResult.success(aiResult);
+    }
+
     @PostMapping("/save")
     @Operation(summary = "保存病历", description = "保存（编辑后的）病历")
     public CommonResult<MedicalRecord> save(@Valid @RequestBody MedicalRecordRequest request) {

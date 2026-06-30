@@ -61,7 +61,17 @@
           <template #default="{ row }">{{ formatTimeSlot(row.timeSlot) }}</template>
         </el-table-column>
         <el-table-column prop="symptom" label="症状" min-width="140" show-overflow-tooltip />
-        <el-table-column prop="triageResult" label="分诊结果" min-width="120" show-overflow-tooltip />
+        <el-table-column label="AI分诊" width="120">
+          <template #default="{ row }">
+            <div v-if="row.triageResult">
+              <el-tag type="success" size="small">已推荐</el-tag>
+              <div class="triage-recommendation">{{ row.triageResult }}</div>
+            </div>
+            <div v-else class="no-triage">
+              <el-tag type="info" size="small">未使用</el-tag>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column label="状态" width="90">
           <template #default="{ row }">
             <el-tag :type="getStatusTag(row.status)" size="small">{{ getStatusLabel(row.status) }}</el-tag>
@@ -589,5 +599,20 @@ function goToHistory() {
 
 .empty-wrapper {
   padding: 40px 0;
+}
+
+/* AI分诊样式 */
+.triage-recommendation {
+  font-size: 11px;
+  color: #67c23a;
+  margin-top: 2px;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.no-triage {
+  color: #909399;
 }
 </style>

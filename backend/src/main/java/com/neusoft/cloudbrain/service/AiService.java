@@ -292,21 +292,45 @@ public class AiService {
     }
 
     public String generateMedicalRecord(String dialogueText) {
+        return generateMedicalRecordWithSymptoms(dialogueText, null, null);
+    }
+
+    public String generateMedicalRecordWithSymptoms(String dialogueText, String symptoms, String department) {
         log.info("========== AI病历生成开始 ==========");
         log.info("对话记录长度: {} 字符", dialogueText != null ? dialogueText.length() : 0);
+        log.info("患者自述症状: {}", symptoms);
+        log.info("科室: {}", department);
 
-        String prompt = String.format(
-                "你是医疗病历生成专家。根据以下医患对话记录，生成结构化病历。\n" +
-                "请以JSON格式返回，包含以下字段：\n" +
-                "presentIllness: 现病史\n" +
-                "pastHistory: 既往史\n" +
-                "physicalExamination: 体格检查\n" +
-                "diagnosis: 初步诊断\n" +
-                "treatmentPlan: 治疗意见\n\n" +
-                "对话记录：\n%s\n\n" +
-                "只返回JSON，不要其他文字。",
-                dialogueText
-        );
+        StringBuilder promptBuilder = new StringBuilder();
+        promptBuilder.append("你是资深病历书写专家。请根据以下患者信息，生成规范、完整的结构化电子病历。\n\n");
+
+        promptBuilder.append("【患者信息】\n");
+        if (department != null && !department.isBlank()) {
+            promptBuilder.append("就诊科室：").append(department).append("\n");
+        }
+        if (symptoms != null && !symptoms.isBlank()) {
+            promptBuilder.append("患者自述症状：").append(symptoms).append("\n");
+        }
+
+        if (dialogueText != null && !dialogueText.isBlank()) {
+            promptBuilder.append("\n【医患对话记录】\n").append(dialogueText).append("\n");
+        }
+
+        promptBuilder.append("\n【病历生成要求】\n");
+        promptBuilder.append("请以JSON格式返回，包含以下字段：\n");
+        promptBuilder.append("chiefComplaint: 主诉（简明扼要，20字以内）\n");
+        promptBuilder.append("presentIllness: 现病史（详细描述发病时间、诱因、主要症状特点、伴随症状、诊治经过等）\n");
+        promptBuilder.append("pastHistory: 既往史（既往健康状况、疾病史、手术史、过敏史等）\n");
+        promptBuilder.append("physicalExamination: 体格检查（根据症状推断相关检查项目和可能的结果）\n");
+        promptBuilder.append("diagnosis: 初步诊断（根据信息给出最可能的诊断）\n");
+        promptBuilder.append("treatmentPlan: 治疗意见（包括药物治疗、生活方式建议、复诊建议等）\n\n");
+        promptBuilder.append("要求：\n");
+        promptBuilder.append("1. 内容要真实、合理、符合医学规范\n");
+        promptBuilder.append("2. 根据提供的信息合理推断，信息不足的地方可以留空或写\"待进一步检查\"\n");
+        promptBuilder.append("3. 语言专业、准确，符合病历书写规范\n");
+        promptBuilder.append("4. 只返回JSON，不要其他任何文字");
+
+        String prompt = promptBuilder.toString();
 
         long startTime = System.currentTimeMillis();
         try {
@@ -362,27 +386,46 @@ public class AiService {
     }
 
     public String recommendMedicine(String symptoms, String diagnosis, String department) {
+        return recommendMedicineWithDialogue(symptoms, diagnosis, department, null);
+    }
+
+    public String recommendMedicineWithDialogue(String symptoms, String diagnosis, String department, String dialogueText) {
         log.info("========== AI药品推荐开始 ==========");
         log.info("症状: {}", symptoms);
         log.info("诊断: {}", diagnosis);
         log.info("科室: {}", department);
+        log.info("对话记录长度: {}", dialogueText != null ? dialogueText.length() : 0);
 
-        String prompt = String.format(
-                "你是临床用药专家。根据以下患者信息，推荐合适的药品。\n\n" +
-                "科室：%s\n" +
-                "症状：%s\n" +
-                "初步诊断：%s\n\n" +
-                "请根据患者的实际症状和诊断，综合考虑用药的：\n" +
-                "1. 有效性 - 对症下药\n" +
-                "2. 安全性 - 考虑患者年龄、体质、过敏史\n" +
-                "3. 合理性 - 不重复用药，避免药物相互作用\n\n" +
-                "请以JSON数组格式返回推荐的药品列表，每个药品包含以下字段：\n" +
-                "name: 药品名称\n" +
-                "dose: 剂量（如：2片/次）\n" +
-                "frequency: 用法频次（如：每日3次，饭后服用）\n\n" +
-                "只返回JSON数组，不要其他文字。药品数量根据实际需要，不做限制。",
-                department, symptoms, diagnosis
-        );
+        StringBuilder promptBuilder = new StringBuilder();
+        promptBuilder.append("你是经验丰富的临床用药专家。请根据以下患者信息，谨慎、精准地推荐合适的药品。\n\n");
+        promptBuilder.append("【患者基本信息】\n");
+        promptBuilder.append("科室：").append(department).append("\n");
+        promptBuilder.append("患者自述症状：").append(symptoms).append("\n");
+        if (diagnosis != null && !diagnosis.isBlank()) {
+            promptBuilder.append("初步诊断：").append(diagnosis).append("\n");
+        }
+
+        if (dialogueText != null && !dialogueText.isBlank()) {
+            promptBuilder.append("\n【医患对话记录】\n").append(dialogueText).append("\n");
+        }
+
+        promptBuilder.append("\n【用药原则】\n");
+        promptBuilder.append("1. 有效性：严格对症下药，根据患者具体症状和诊断选择最适合的药品\n");
+        promptBuilder.append("2. 安全性：充分考虑可能的禁忌症、过敏风险和不良反应\n");
+        promptBuilder.append("3. 合理性：避免重复用药，注意药物相互作用，剂量准确\n");
+        promptBuilder.append("4. 经济性：在保证疗效的前提下，优先选择常用、性价比高的药品\n");
+        promptBuilder.append("5. 严谨性：如信息不足无法确定，宁可少推荐也不盲目推荐\n\n");
+
+        promptBuilder.append("请以JSON数组格式返回推荐的药品列表，每个药品包含以下字段：\n");
+        promptBuilder.append("name: 药品名称（通用名，不要商品名）\n");
+        promptBuilder.append("dose: 剂量（如：2片/次，10mg/次）\n");
+        promptBuilder.append("frequency: 用法频次（如：每日3次，饭后口服）\n\n");
+        promptBuilder.append("要求：\n");
+        promptBuilder.append("- 只推荐确实对症的药品，不要为了凑数而推荐\n");
+        promptBuilder.append("- 药品数量根据病情需要，一般2-5种为宜\n");
+        promptBuilder.append("- 只返回JSON数组，不要其他任何文字说明");
+
+        String prompt = promptBuilder.toString();
 
         long startTime = System.currentTimeMillis();
         try {
@@ -429,5 +472,63 @@ public class AiService {
      */
     public String callDeepSeekApiForConsultation(String prompt) {
         return callDeepSeekApi(prompt);
+    }
+
+    public String optimizeMedicalRecord(String chiefComplaint, String presentIllness,
+            String pastHistory, String physicalExamination, String diagnosis,
+            String treatmentPlan) {
+        log.info("========== AI优化病历开始 ==========");
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("你是资深病历审核专家。请根据以下问诊记录，优化生成完整规范的电子病历。\n\n");
+        sb.append("当前问诊记录：\n");
+        if (chiefComplaint != null && !chiefComplaint.isBlank()) {
+            sb.append("主诉：").append(chiefComplaint).append("\n");
+        }
+        if (presentIllness != null && !presentIllness.isBlank()) {
+            sb.append("现病史：").append(presentIllness).append("\n");
+        }
+        if (pastHistory != null && !pastHistory.isBlank()) {
+            sb.append("既往史：").append(pastHistory).append("\n");
+        }
+        if (physicalExamination != null && !physicalExamination.isBlank()) {
+            sb.append("体格检查：").append(physicalExamination).append("\n");
+        }
+        if (diagnosis != null && !diagnosis.isBlank()) {
+            sb.append("初步诊断：").append(diagnosis).append("\n");
+        }
+        if (treatmentPlan != null && !treatmentPlan.isBlank()) {
+            sb.append("治疗意见：").append(treatmentPlan).append("\n");
+        }
+        sb.append("\n请对以上内容进行医学规范化优化，要求：\n");
+        sb.append("1. 保持原有核心信息不变，只做规范化、专业化润色\n");
+        sb.append("2. 补充合理的医学细节，使病历更完整规范\n");
+        sb.append("3. 语言专业、准确、符合病历书写规范\n\n");
+        sb.append("请以JSON格式返回，包含以下字段：\n");
+        sb.append("chiefComplaint: 主诉\n");
+        sb.append("presentIllness: 现病史\n");
+        sb.append("pastHistory: 既往史\n");
+        sb.append("physicalExamination: 体格检查\n");
+        sb.append("diagnosis: 初步诊断\n");
+        sb.append("treatmentPlan: 治疗意见\n\n");
+        sb.append("只返回JSON，不要其他文字。");
+
+        String prompt = sb.toString();
+
+        long startTime = System.currentTimeMillis();
+        try {
+            String response = callDeepSeekApi(prompt);
+            String content = parseContentFromResponse(response);
+            long cost = System.currentTimeMillis() - startTime;
+
+            log.info("病历优化成功，耗时: {}ms", cost);
+            log.info("========== AI优化病历结束 ==========");
+            return content;
+        } catch (Exception e) {
+            long cost = System.currentTimeMillis() - startTime;
+            log.error("病历优化失败，耗时: {}ms", cost, e);
+            log.info("========== AI优化病历异常 ==========");
+            return "{\"error\": \"AI服务暂时不可用\"}";
+        }
     }
 }

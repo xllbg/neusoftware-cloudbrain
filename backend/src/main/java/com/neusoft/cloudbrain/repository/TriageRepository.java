@@ -10,4 +10,6 @@ import java.util.List;
 public interface TriageRepository extends JpaRepository<Triage, Long> {
 
     List<Triage> findByPatientId(Long patientId);
+
+    List<Triage> findByPatientIdOrderByCreatedAtDesc(Long patientId);
 }
