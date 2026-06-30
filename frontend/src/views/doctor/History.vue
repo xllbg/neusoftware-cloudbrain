@@ -11,11 +11,23 @@
     <el-tabs v-model="activeTab">
       <!-- 问诊记录 -->
       <el-tab-pane label="问诊记录" name="consultation">
-        <app-loading :visible="consultLoading" />
-        <div v-if="!consultLoading && consultationRecords.length === 0">
-          <app-empty description="暂无问诊记录" />
+        <div class="search-bar">
+          <el-input
+            v-model="consultSearchKeyword"
+            placeholder="搜索患者姓名或挂号号"
+            clearable
+            style="width: 200px; margin-bottom: 12px"
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
         </div>
-        <el-table v-else :data="consultationRecords" stripe border>
+        <app-loading :visible="consultLoading" />
+        <div v-if="!consultLoading && filteredConsultRecords.length === 0">
+          <app-empty :description="consultSearchKeyword ? '未找到匹配的问诊记录' : '暂无问诊记录'" />
+        </div>
+        <el-table v-else :data="filteredConsultRecords" stripe border>
           <el-table-column prop="id" label="记录号" width="100" />
           <el-table-column prop="registrationId" label="挂号号" width="100" />
           <el-table-column label="诊断" min-width="150" show-overflow-tooltip>
@@ -43,14 +55,34 @@
 
       <!-- 处方记录 -->
       <el-tab-pane label="处方记录" name="prescription">
-        <app-loading :visible="presLoading" />
-        <div v-if="!presLoading && prescriptions.length === 0">
-          <app-empty description="暂无处方记录" />
+        <div class="search-bar">
+          <el-input
+            v-model="prescSearchKeyword"
+            placeholder="搜索患者姓名或处方号"
+            clearable
+            style="width: 200px; margin-bottom: 12px"
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
         </div>
-        <el-table v-else :data="prescriptions" stripe border>
+        <app-loading :visible="presLoading" />
+        <div v-if="!presLoading && filteredPrescriptions.length === 0">
+          <app-empty :description="prescSearchKeyword ? '未找到匹配的处方记录' : '暂无处方记录'" />
+        </div>
+        <el-table v-else :data="filteredPrescriptions" stripe border>
           <el-table-column prop="id" label="处方号" width="100" />
           <el-table-column prop="patientName" label="患者姓名" width="100" />
           <el-table-column prop="doctorName" label="开方医生" width="100" />
+          <el-table-column label="AI审核" width="100">
+            <template #default="{ row }">
+              <el-tag v-if="row.hasCheckResult" :type="getRiskTagType(row.checkRiskLevel)" size="small">
+                {{ row.checkRiskLevel || '已审核' }}
+              </el-tag>
+              <el-tag v-else type="info" size="small">未审核</el-tag>
+            </template>
+          </el-table-column>
           <el-table-column label="状态" width="100">
             <template #default="{ row }">
               <el-tag :type="getStatusTag(row.status)">{{ getStatusLabel(row.status) }}</el-tag>
@@ -59,9 +91,12 @@
           <el-table-column prop="createTime" label="开具时间" width="160">
             <template #default="{ row }">{{ formatDateTime(row.createTime) }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="100" fixed="right">
+          <el-table-column label="操作" width="150" fixed="right">
             <template #default="{ row }">
               <el-button type="primary" size="small" @click="viewPrescription(row)">查看处方</el-button>
+              <el-button v-if="row.hasCheckResult" type="warning" size="small" @click="viewCheckResult(row)">
+                审核详情
+              </el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -69,11 +104,24 @@
 
       <!-- 病历记录 -->
       <el-tab-pane label="病历记录" name="record">
-        <app-loading :visible="recLoading" />
-        <div v-if="!recLoading && medicalRecords.length === 0">
-          <app-empty description="暂无病历记录" />
+        <div class="search-bar">
+          <el-input
+            v-model="recordSearchKeyword"
+            placeholder="搜索患者姓名或ID"
+            clearable
+            style="width: 200px; margin-bottom: 12px"
+            @input="filterRecords"
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
         </div>
-        <el-table v-else :data="medicalRecords" stripe border>
+        <app-loading :visible="recLoading" />
+        <div v-if="!recLoading && filteredMedicalRecords.length === 0">
+          <app-empty :description="recordSearchKeyword ? '未找到匹配的患者病历' : '暂无病历记录'" />
+        </div>
+        <el-table v-else :data="filteredMedicalRecords" stripe border>
           <el-table-column prop="id" label="病历号" width="100" />
           <el-table-column prop="patientName" label="患者姓名" width="100" />
           <el-table-column prop="doctorName" label="接诊医生" width="100" />
@@ -132,6 +180,17 @@
     <!-- 处方详情弹窗 - 处方单格式 -->
     <el-dialog v-model="prescriptionDialogVisible" title="处方笺" width="700px" :close-on-click-modal="false">
       <div class="prescription-form" v-if="currentPrescription">
+        <!-- AI审核结果提示 -->
+        <el-alert
+          v-if="currentPrescriptionCheckResult"
+          :title="currentPrescriptionCheckResult.checkResult"
+          :type="getCheckResultType(currentPrescriptionCheckResult.checkResult)"
+          :description="`风险等级：${currentPrescriptionCheckResult.riskLevel || '未知'}`"
+          show-icon
+          :closable="false"
+          class="check-result-alert"
+        />
+
         <!-- 处方单头部 -->
         <div class="prescription-header">
           <h3>医 疗 处 方 笺</h3>
@@ -189,6 +248,32 @@
           </tr>
         </table>
 
+        <!-- AI审核详情 -->
+        <div v-if="currentPrescriptionCheckResult" class="ai-check-details">
+          <el-divider content-position="left">AI审核详情</el-divider>
+          <el-descriptions :column="1" border size="small">
+            <el-descriptions-item label="审核结果">
+              <el-tag :type="getCheckResultType(currentPrescriptionCheckResult.checkResult)">
+                {{ currentPrescriptionCheckResult.checkResult }}
+              </el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="风险等级">
+              <el-tag :type="getRiskTagType(currentPrescriptionCheckResult.riskLevel)" size="large">
+                {{ currentPrescriptionCheckResult.riskLevel || '未知' }}
+              </el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="用药建议">
+              <div style="white-space: pre-wrap;">{{ currentPrescriptionCheckResult.medicationSuggestions || '无' }}</div>
+            </el-descriptions-item>
+            <el-descriptions-item label="相互作用检测">
+              <div style="white-space: pre-wrap;">{{ currentPrescriptionCheckResult.interactionDetection || '未检测到相互作用' }}</div>
+            </el-descriptions-item>
+            <el-descriptions-item label="风险提示">
+              <div style="white-space: pre-wrap; color: #e6a23c;">{{ currentPrescriptionCheckResult.riskHints || '暂无' }}</div>
+            </el-descriptions-item>
+          </el-descriptions>
+        </div>
+
         <!-- 处方单底部 -->
         <div class="prescription-footer">
           <div class="signature-line">
@@ -197,6 +282,57 @@
           </div>
           <div class="hospital-info">智慧云脑诊疗平台</div>
         </div>
+      </div>
+    </el-dialog>
+
+    <!-- 审核详情弹窗 -->
+    <el-dialog v-model="checkResultDialogVisible" title="AI处方审核详情" width="600px">
+      <div v-if="currentCheckResult" class="check-result-detail">
+        <el-alert
+          :title="currentCheckResult.checkResult"
+          :type="getCheckResultType(currentCheckResult.checkResult)"
+          :description="`风险等级：${currentCheckResult.riskLevel || '未知'}`"
+          show-icon
+          :closable="false"
+          class="check-result-alert"
+        />
+
+        <el-divider content-position="left">审核详情</el-divider>
+
+        <el-descriptions :column="1" border size="small">
+          <el-descriptions-item label="风险等级">
+            <el-tag :type="getRiskTagType(currentCheckResult.riskLevel)" size="large">
+              {{ currentCheckResult.riskLevel || '未知' }}
+            </el-tag>
+          </el-descriptions-item>
+        </el-descriptions>
+
+        <el-divider content-position="left">用药建议</el-divider>
+        <div class="result-section">
+          <div v-if="currentCheckResult.medicationSuggestions" class="result-content">
+            {{ currentCheckResult.medicationSuggestions }}
+          </div>
+          <div v-else class="result-empty">暂无建议</div>
+        </div>
+
+        <el-divider content-position="left">药物相互作用检测</el-divider>
+        <div class="result-section">
+          <div v-if="currentCheckResult.interactionDetection" class="result-content">
+            {{ currentCheckResult.interactionDetection }}
+          </div>
+          <div v-else class="result-empty">未检测到相互作用</div>
+        </div>
+
+        <el-divider content-position="left">风险提示</el-divider>
+        <div class="result-section">
+          <div v-if="currentCheckResult.riskHints" class="result-content risk-hints">
+            {{ currentCheckResult.riskHints }}
+          </div>
+          <div v-else class="result-empty">暂无风险提示</div>
+        </div>
+      </div>
+      <div v-else>
+        <el-empty description="暂无审核结果" />
       </div>
     </el-dialog>
 
@@ -289,14 +425,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue"
+import { ref, onMounted, computed } from "vue"
 import { useRouter } from "vue-router"
-import { ArrowLeft } from "@element-plus/icons-vue"
+import { ArrowLeft, Search } from "@element-plus/icons-vue"
 import { usePrescriptionStore } from "@/stores/prescription"
 import { useMedicalRecordStore } from "@/stores/medicalRecord"
 import { useUserStore } from "@/stores/user"
 import { getStatusTag, getStatusLabel, formatDateTime } from "@/utils/format"
-import type { PrescriptionRecord, MedicalRecord } from "@/types"
+import type { PrescriptionRecord, MedicalRecord, AiCheckResult } from "@/types"
 import { ElMessage } from "element-plus"
 import { getConsultationRecordList, type ConsultationRecordData } from "@/api/doctor"
 
@@ -314,7 +450,7 @@ const consultLoading = ref(false)
 const presLoading = ref(false)
 const recLoading = ref(false)
 const consultationRecords = ref<ConsultationRecordData[]>([])
-const prescriptions = ref<PrescriptionRecord[]>([])
+const prescriptions = ref<(PrescriptionRecord & { hasCheckResult?: boolean; checkRiskLevel?: string })[]>([])
 const medicalRecords = ref<MedicalRecord[]>([])
 
 // 问诊记录弹窗
@@ -324,13 +460,61 @@ const currentConsultation = ref<ConsultationRecordData | null>(null)
 // 处方弹窗
 const prescriptionDialogVisible = ref(false)
 const currentPrescription = ref<PrescriptionRecord | null>(null)
+const currentPrescriptionCheckResult = ref<AiCheckResult | null>(null)
 
-// 病历弹窗
-const recordDialogVisible = ref(false)
-const currentRecord = ref<MedicalRecord | null>(null)
+// 审核详情弹窗
+const checkResultDialogVisible = ref(false)
+const currentCheckResult = ref<AiCheckResult | null>(null)
 
 // 解析药品列表
 const parsedMedicineList = ref<any[]>([])
+
+// 病历搜索
+const recordSearchKeyword = ref("")
+const consultSearchKeyword = ref("")
+const prescSearchKeyword = ref("")
+
+// 过滤后的问诊记录
+const filteredConsultRecords = computed(() => {
+  if (!consultSearchKeyword.value) {
+    return consultationRecords.value
+  }
+  const keyword = consultSearchKeyword.value.toLowerCase()
+  return consultationRecords.value.filter((record) => {
+    const patientName = (record.patientName || "").toLowerCase()
+    const regId = String(record.registrationId || "")
+    const diagnosis = (record.diagnosis || "").toLowerCase()
+    return patientName.includes(keyword) || regId.includes(keyword) || diagnosis.includes(keyword)
+  })
+})
+
+// 过滤后的处方记录
+const filteredPrescriptions = computed(() => {
+  if (!prescSearchKeyword.value) {
+    return prescriptions.value
+  }
+  const keyword = prescSearchKeyword.value.toLowerCase()
+  return prescriptions.value.filter((record) => {
+    const patientName = (record.patientName || "").toLowerCase()
+    const prescId = String(record.id || "")
+    const doctorName = (record.doctorName || "").toLowerCase()
+    return patientName.includes(keyword) || prescId.includes(keyword) || doctorName.includes(keyword)
+  })
+})
+
+// 过滤后的病历记录
+const filteredMedicalRecords = computed(() => {
+  if (!recordSearchKeyword.value) {
+    return medicalRecords.value
+  }
+  const keyword = recordSearchKeyword.value.toLowerCase()
+  return medicalRecords.value.filter((record) => {
+    const patientName = (record.patientName || "").toLowerCase()
+    const patientId = String(record.patientId || "")
+    const diagnosis = (record.diagnosis || "").toLowerCase()
+    return patientName.includes(keyword) || patientId.includes(keyword) || diagnosis.includes(keyword)
+  })
+})
 
 onMounted(async () => {
   if (!userStore.userId) {
@@ -349,7 +533,14 @@ onMounted(async () => {
   presLoading.value = true
   try {
     const res = await presStore.fetchList({ doctorId: userStore.userId })
-    prescriptions.value = res || []
+    // 获取每个处方的审核结果
+    const presList = res || []
+    for (const p of presList) {
+      const checkResult = await presStore.getCheckResult(p.id)
+      p.hasCheckResult = !!checkResult
+      p.checkRiskLevel = checkResult?.riskLevel || ''
+    }
+    prescriptions.value = presList
   } finally { presLoading.value = false }
 
   // 加载病历记录
@@ -367,7 +558,7 @@ function viewConsultation(record: ConsultationRecordData) {
 }
 
 // 查看处方详情
-function viewPrescription(prescription: PrescriptionRecord) {
+async function viewPrescription(prescription: PrescriptionRecord) {
   currentPrescription.value = {
     ...prescription,
     createTime: prescription.createTime || (prescription as any).createdAt,
@@ -382,7 +573,16 @@ function viewPrescription(prescription: PrescriptionRecord) {
   } catch (e) {
     parsedMedicineList.value = []
   }
+  // 获取审核结果
+  currentPrescriptionCheckResult.value = await presStore.getCheckResult(prescription.id)
   prescriptionDialogVisible.value = true
+}
+
+// 查看审核详情
+async function viewCheckResult(prescription: any) {
+  const result = await presStore.getCheckResult(prescription.id)
+  currentCheckResult.value = result
+  checkResultDialogVisible.value = true
 }
 
 // 查看病历详情
@@ -392,6 +592,22 @@ function viewRecord(record: MedicalRecord) {
     createTime: record.createTime || (record as any).createdAt,
   }
   recordDialogVisible.value = true
+}
+
+// 获取风险标签类型
+function getRiskTagType(level: string | undefined): string {
+  if (!level) return 'info'
+  if (level.includes('低') || level.includes('安全')) return 'success'
+  if (level.includes('中')) return 'warning'
+  return 'danger'
+}
+
+// 获取审核结果类型
+function getCheckResultType(result: string | undefined): "success" | "warning" | "error" | "info" {
+  if (!result) return 'info'
+  if (result.includes('通过') || result.includes('安全')) return 'success'
+  if (result.includes('警告') || result.includes('注意')) return 'warning'
+  return 'error'
 }
 </script>
 
@@ -587,5 +803,48 @@ function viewRecord(record: MedicalRecord) {
   margin-top: 30px;
   padding-top: 20px;
   border-top: 1px solid #ddd;
+}
+
+/* 审核详情样式 */
+.check-result-alert {
+  margin-bottom: 16px;
+}
+
+.check-result-detail {
+  padding: 0 8px;
+}
+
+.result-section {
+  padding: 12px 16px;
+  background: #f5f7fa;
+  border-radius: 4px;
+  min-height: 60px;
+}
+
+.result-content {
+  white-space: pre-wrap;
+  line-height: 1.8;
+  font-size: 14px;
+  color: #303133;
+}
+
+.result-empty {
+  color: #909399;
+  font-style: italic;
+}
+
+.risk-hints {
+  color: #e6a23c;
+  font-weight: 500;
+}
+
+/* AI审核详情样式 */
+.ai-check-details {
+  margin-top: 20px;
+}
+
+/* 病历搜索样式 */
+.search-bar {
+  margin-bottom: 8px;
 }
 </style>

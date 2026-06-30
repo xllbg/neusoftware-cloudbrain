@@ -61,9 +61,15 @@ public class MedicalRecordService {
     }
 
     public Map<String, Object> generateMedicalRecordByAi(Long patientId, String dialogueText) {
-        log.info("AI生成病历 - 患者ID: {}, 对话文本: {}", patientId, dialogueText);
+        return generateMedicalRecordByAi(patientId, dialogueText, null, null);
+    }
 
-        String aiResult = aiService.generateMedicalRecord(dialogueText);
+    public Map<String, Object> generateMedicalRecordByAi(Long patientId, String dialogueText, 
+            String symptoms, String department) {
+        log.info("AI生成病历 - 患者ID: {}, 对话文本长度: {}", patientId, dialogueText != null ? dialogueText.length() : 0);
+        log.info("患者自述症状: {}, 科室: {}", symptoms, department);
+
+        String aiResult = aiService.generateMedicalRecordWithSymptoms(dialogueText, symptoms, department);
 
         Map<String, Object> result = parseAiMedicalRecordResult(aiResult);
         result.put("patientId", patientId);

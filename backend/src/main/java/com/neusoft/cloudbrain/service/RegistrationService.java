@@ -5,10 +5,12 @@ import com.neusoft.cloudbrain.dto.RegistrationResponse;
 import com.neusoft.cloudbrain.entity.Doctor;
 import com.neusoft.cloudbrain.entity.Patient;
 import com.neusoft.cloudbrain.entity.Registration;
+import com.neusoft.cloudbrain.entity.Triage;
 import com.neusoft.cloudbrain.exception.BusinessException;
 import com.neusoft.cloudbrain.repository.DoctorRepository;
 import com.neusoft.cloudbrain.repository.PatientRepository;
 import com.neusoft.cloudbrain.repository.RegistrationRepository;
+import com.neusoft.cloudbrain.repository.TriageRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,7 @@ public class RegistrationService {
     private final RegistrationRepository registrationRepository;
     private final PatientRepository patientRepository;
     private final DoctorRepository doctorRepository;
+    private final TriageRepository triageRepository;
 
     @Transactional
     public RegistrationResponse createRegistration(RegistrationRequest request) {
@@ -123,6 +126,18 @@ public class RegistrationService {
                 })
                 .map(reg -> {
                     Patient patient = patientRepository.findById(reg.getPatientId()).orElse(null);
+
+                    // 查询分诊结果
+                    String triageResult = reg.getTriageResult();
+                    if (triageResult == null || triageResult.isBlank()) {
+                        // 从Triage表查询该患者最新的分诊记录
+                        List<Triage> triageList = triageRepository.findByPatientIdOrderByCreatedAtDesc(reg.getPatientId());
+                        if (triageList != null && !triageList.isEmpty()) {
+                            Triage latestTriage = triageList.get(0);
+                            triageResult = "建议" + latestTriage.getRecommendedDepartment() + "就诊";
+                        }
+                    }
+
                     return RegistrationResponse.RegistrationListItem.builder()
                             .id(reg.getId())
                             .patientId(reg.getPatientId())
@@ -132,7 +147,7 @@ public class RegistrationService {
                             .timeSlot(reg.getTimeSlot())
                             .status(reg.getStatus())
                             .symptom(reg.getSymptom())
-                            .triageResult(reg.getTriageResult())
+                            .triageResult(triageResult)
                             .createdAt(reg.getCreatedAt())
                             .build();
                 })
