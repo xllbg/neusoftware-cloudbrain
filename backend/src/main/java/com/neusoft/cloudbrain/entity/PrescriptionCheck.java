@@ -42,8 +42,4 @@ public class PrescriptionCheck {
     @CreatedDate
     @Column(name = "checked_at", updatable = false)
     private LocalDateTime checkedAt;
-
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "prescription_id", insertable = false, updatable = false)
-    private Prescription prescription;
 }

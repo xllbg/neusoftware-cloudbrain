@@ -290,7 +290,7 @@ async function submitPrescription() {
     if (checkResult.value) {
       try {
         await prescriptionStore.saveCheckResult({
-          prescriptionId: result.id,
+          prescriptionId: String(result.id),
           checkResult: checkResult.value.checkResult || "",
           medicationSuggestions: checkResult.value.medicationSuggestions || "",
           interactionDetection: checkResult.value.interactionDetection || "",

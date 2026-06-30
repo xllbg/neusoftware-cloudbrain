@@ -6,10 +6,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/patient")
@@ -18,6 +15,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class PatientController {
 
     private final PatientService patientService;
+
+    @GetMapping("/detail")
+    @Operation(summary = "患者详情", description = "根据ID获取患者详细信息")
+    public CommonResult<com.neusoft.cloudbrain.entity.Patient> detail(@RequestParam Long id) {
+        com.neusoft.cloudbrain.entity.Patient patient = patientService.getPatientDetail(id);
+        return CommonResult.success(patient);
+    }
 
     @PostMapping("/register")
     @Operation(summary = "患者注册")

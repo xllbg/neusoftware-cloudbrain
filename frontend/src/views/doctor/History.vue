@@ -93,10 +93,12 @@
           </el-table-column>
           <el-table-column label="操作" width="150" fixed="right">
             <template #default="{ row }">
-              <el-button type="primary" size="small" @click="viewPrescription(row)">查看处方</el-button>
-              <el-button v-if="row.hasCheckResult" type="warning" size="small" @click="viewCheckResult(row)">
-                审核详情
-              </el-button>
+              <div class="action-buttons">
+                <el-button type="primary" size="small" @click="viewPrescription(row)">查看处方</el-button>
+                <el-button v-if="row.hasCheckResult" type="warning" size="small" @click="viewCheckResult(row)">
+                  审核详情
+                </el-button>
+              </div>
             </template>
           </el-table-column>
         </el-table>
@@ -110,7 +112,6 @@
             placeholder="搜索患者姓名或ID"
             clearable
             style="width: 200px; margin-bottom: 12px"
-            @input="filterRecords"
           >
             <template #prefix>
               <el-icon><Search /></el-icon>
@@ -135,9 +136,11 @@
           <el-table-column prop="createTime" label="创建时间" width="160">
             <template #default="{ row }">{{ formatDateTime(row.createTime) }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="100" fixed="right">
+          <el-table-column label="操作" width="120" fixed="right">
             <template #default="{ row }">
-              <el-button type="primary" size="small" @click="viewRecord(row)">查看病历</el-button>
+              <div class="action-buttons">
+                <el-button type="primary" size="small" @click="viewRecord(row)">查看病历</el-button>
+              </div>
             </template>
           </el-table-column>
         </el-table>
@@ -621,6 +624,18 @@ function getCheckResultType(result: string | undefined): "success" | "warning" |
 }
 
 .page-title { font-size: 22px; color: #303133; margin: 0; }
+
+/* 操作列按钮 */
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.action-buttons .el-button + .el-button {
+  margin-left: 0;
+}
 
 /* 问诊记录详情样式 */
 .consultation-record-form {

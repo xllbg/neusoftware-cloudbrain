@@ -50,6 +50,11 @@ public class PatientService {
                 .build();
     }
 
+    public Patient getPatientDetail(Long id) {
+        return patientRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(404, "患者不存在"));
+    }
+
     public LoginResponse login(PatientLoginRequest request) {
         Patient patient = patientRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new BusinessException("用户名或密码错误"));
