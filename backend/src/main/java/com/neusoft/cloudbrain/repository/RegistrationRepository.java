@@ -14,4 +14,6 @@ public interface RegistrationRepository extends JpaRepository<Registration, Long
     List<Registration> findByDoctorIdOrderByCreatedAtDesc(Long doctorId);
 
     List<Registration> findByPatientIdAndStatus(Long patientId, String status);
+
+    List<Registration> findByDepartmentOrderByCreatedAtDesc(String department);
 }

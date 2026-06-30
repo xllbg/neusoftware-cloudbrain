@@ -103,7 +103,26 @@ public class RegistrationService {
     public List<RegistrationResponse.RegistrationListItem> getDoctorRegistrations(Long doctorId, String status, String department, String date) {
         log.info("查询医生挂号列表 - 医生ID: {}, 状态: {}, 科室: {}, 日期: {}", doctorId, status, department, date);
 
+        // 获取医生信息，判断是否为急诊科医生
+        Doctor doctor = doctorRepository.findById(doctorId).orElse(null);
+        String doctorDepartment = doctor != null ? doctor.getDepartment() : null;
+
         List<Registration> registrations = registrationRepository.findByDoctorIdOrderByCreatedAtDesc(doctorId);
+
+        // 急诊科医生：同时查询急诊科待分配挂号（doctorId为NULL且科室为急诊科）
+        if ("急诊科".equals(doctorDepartment)) {
+            List<Registration> emergencyRegs = registrationRepository.findByDepartmentOrderByCreatedAtDesc("急诊科");
+            for (Registration reg : emergencyRegs) {
+                // 检查是否已存在于列表中（避免重复）
+                boolean exists = registrations.stream().anyMatch(r -> r.getId().equals(reg.getId()));
+                // 只添加待分配的挂号（doctorId为NULL）
+                if (!exists && reg.getDoctorId() == null) {
+                    registrations.add(reg);
+                }
+            }
+            // 按创建时间降序排序
+            registrations.sort((r1, r2) -> r2.getCreatedAt().compareTo(r1.getCreatedAt()));
+        }
 
         return registrations.stream()
                 .filter(reg -> {
