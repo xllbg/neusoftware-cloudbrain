@@ -9,50 +9,6 @@
     </div>
 
     <el-tabs v-model="activeTab">
-      <!-- 问诊记录 -->
-      <el-tab-pane label="问诊记录" name="consultation">
-        <div class="search-bar">
-          <el-input
-            v-model="consultSearchKeyword"
-            placeholder="搜索患者姓名或挂号号"
-            clearable
-            style="width: 200px; margin-bottom: 12px"
-          >
-            <template #prefix>
-              <el-icon><Search /></el-icon>
-            </template>
-          </el-input>
-        </div>
-        <app-loading :visible="consultLoading" />
-        <div v-if="!consultLoading && filteredConsultRecords.length === 0">
-          <app-empty :description="consultSearchKeyword ? '未找到匹配的问诊记录' : '暂无问诊记录'" />
-        </div>
-        <el-table v-else :data="filteredConsultRecords" stripe border>
-          <el-table-column prop="id" label="记录号" width="100" />
-          <el-table-column prop="registrationId" label="挂号号" width="100" />
-          <el-table-column label="诊断" min-width="150" show-overflow-tooltip>
-            <template #default="{ row }">{{ row.diagnosis || '-' }}</template>
-          </el-table-column>
-          <el-table-column label="主诉" min-width="150" show-overflow-tooltip>
-            <template #default="{ row }">{{ row.chiefComplaint || '-' }}</template>
-          </el-table-column>
-          <el-table-column label="来源" width="100">
-            <template #default="{ row }">
-              <el-tag v-if="row.aiRecommended" type="warning">AI推荐</el-tag>
-              <el-tag v-else type="info">手动</el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column prop="updatedAt" label="更新时间" width="180">
-            <template #default="{ row }">{{ formatDateTime(row.updatedAt || row.createdAt) }}</template>
-          </el-table-column>
-          <el-table-column label="操作" width="120" fixed="right">
-            <template #default="{ row }">
-              <el-button type="primary" size="small" @click="viewConsultation(row)">查看详情</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-      </el-tab-pane>
-
       <!-- 处方记录 -->
       <el-tab-pane label="处方记录" name="prescription">
         <div class="search-bar">
@@ -146,39 +102,6 @@
         </el-table>
       </el-tab-pane>
     </el-tabs>
-
-    <!-- 问诊记录详情弹窗 -->
-    <el-dialog v-model="consultDialogVisible" title="问诊记录详情" width="700px" :close-on-click-modal="false">
-      <div class="consultation-record-form" v-if="currentConsultation">
-        <div class="record-section">
-          <div class="section-label">主诉</div>
-          <div class="section-content">{{ currentConsultation.chiefComplaint || '无' }}</div>
-        </div>
-        <div class="record-section">
-          <div class="section-label">现病史</div>
-          <div class="section-content">{{ currentConsultation.presentIllness || '无' }}</div>
-        </div>
-        <div class="record-section">
-          <div class="section-label">既往史</div>
-          <div class="section-content">{{ currentConsultation.pastHistory || '无' }}</div>
-        </div>
-        <div class="record-section">
-          <div class="section-label">体格检查</div>
-          <div class="section-content">{{ currentConsultation.physicalExamination || '无' }}</div>
-        </div>
-        <div class="record-section">
-          <div class="section-label ">初步诊断</div>
-          <div class="section-content ">{{ currentConsultation.diagnosis || '无' }}</div>
-        </div>
-        <div class="record-section">
-          <div class="section-label">治疗意见</div>
-          <div class="section-content">{{ currentConsultation.treatmentPlan || '无' }}</div>
-        </div>
-        <div class="source-tag" v-if="currentConsultation.aiRecommended">
-          <el-tag type="warning" size="large">* 包含AI推荐内容</el-tag>
-        </div>
-      </div>
-    </el-dialog>
 
     <!-- 处方详情弹窗 - 处方单格式 -->
     <el-dialog v-model="prescriptionDialogVisible" title="处方笺" width="700px" :close-on-click-modal="false">
@@ -437,7 +360,6 @@ import { useUserStore } from "@/stores/user"
 import { getStatusTag, getStatusLabel, formatDateTime } from "@/utils/format"
 import type { PrescriptionRecord, MedicalRecord, AiCheckResult } from "@/types"
 import { ElMessage } from "element-plus"
-import { getConsultationRecordList, type ConsultationRecordData } from "@/api/doctor"
 
 const router = useRouter()
 const presStore = usePrescriptionStore()
@@ -448,17 +370,11 @@ function goBack() {
   router.push("/doctor/patients")
 }
 
-const activeTab = ref("consultation")
-const consultLoading = ref(false)
+const activeTab = ref("prescription")
 const presLoading = ref(false)
 const recLoading = ref(false)
-const consultationRecords = ref<ConsultationRecordData[]>([])
 const prescriptions = ref<(PrescriptionRecord & { hasCheckResult?: boolean; checkRiskLevel?: string })[]>([])
 const medicalRecords = ref<MedicalRecord[]>([])
-
-// 问诊记录弹窗
-const consultDialogVisible = ref(false)
-const currentConsultation = ref<ConsultationRecordData | null>(null)
 
 // 处方弹窗
 const prescriptionDialogVisible = ref(false)
@@ -475,22 +391,7 @@ const parsedMedicineList = ref<any[]>([])
 const recordDialogVisible = ref(false)
 const currentRecord = ref<MedicalRecord | null>(null)
 const recordSearchKeyword = ref("")
-const consultSearchKeyword = ref("")
 const prescSearchKeyword = ref("")
-
-// 过滤后的问诊记录
-const filteredConsultRecords = computed(() => {
-  if (!consultSearchKeyword.value) {
-    return consultationRecords.value
-  }
-  const keyword = consultSearchKeyword.value.toLowerCase()
-  return consultationRecords.value.filter((record) => {
-    const patientName = (record.patientName || "").toLowerCase()
-    const regId = String(record.registrationId || "")
-    const diagnosis = (record.diagnosis || "").toLowerCase()
-    return patientName.includes(keyword) || regId.includes(keyword) || diagnosis.includes(keyword)
-  })
-})
 
 // 过滤后的处方记录
 const filteredPrescriptions = computed(() => {
@@ -526,13 +427,6 @@ onMounted(async () => {
     return
   }
 
-  // 加载问诊记录
-  consultLoading.value = true
-  try {
-    const res = await getConsultationRecordList(userStore.userId)
-    consultationRecords.value = (res.data as ConsultationRecordData[]) || []
-  } finally { consultLoading.value = false }
-
   // 加载处方记录
   presLoading.value = true
   try {
@@ -554,12 +448,6 @@ onMounted(async () => {
     medicalRecords.value = res || []
   } finally { recLoading.value = false }
 })
-
-// 查看问诊记录详情
-function viewConsultation(record: ConsultationRecordData) {
-  currentConsultation.value = record
-  consultDialogVisible.value = true
-}
 
 // 查看处方详情
 async function viewPrescription(prescription: PrescriptionRecord) {
@@ -635,11 +523,6 @@ function getCheckResultType(result: string | undefined): "success" | "warning" |
 
 .action-buttons .el-button + .el-button {
   margin-left: 0;
-}
-
-/* 问诊记录详情样式 */
-.consultation-record-form {
-  padding: 10px 0;
 }
 
 /* ===== 处方单样式 ===== */

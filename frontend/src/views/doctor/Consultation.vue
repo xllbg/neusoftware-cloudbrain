@@ -11,17 +11,9 @@
           <el-icon><Check /></el-icon>
           完成问诊
         </el-button>
-        <el-button type="primary" @click="viewMedicalRecord" :disabled="generatingRecord">
-          <el-icon><Notebook /></el-icon>
-          {{ medicalRecordId || consultationRecordId || recordGenerated ? '查看病例' : '生成病历' }}
-        </el-button>
         <el-button type="success" @click="goToPrescription">
           <el-icon><Document /></el-icon>
           开具处方
-        </el-button>
-        <el-button type="danger" @click="generateMedicalRecordFromChat" :loading="generatingRecord" :disabled="recordGenerated">
-          <el-icon><MagicStick /></el-icon>
-          AI生成病历
         </el-button>
       </div>
     </div>
@@ -38,7 +30,7 @@
       </el-descriptions>
     </el-card>
 
-    <!-- 主体区域：左侧聊天 + 右侧问诊记录 -->
+    <!-- 主体区域：左侧聊天 + 右侧病历 -->
     <div class="main-content">
       <!-- 左侧聊天区域 -->
       <el-card class="chat-card">
@@ -110,19 +102,180 @@
           </div>
         </div>
       </el-card>
+
+      <!-- 右侧病历区域 -->
+      <el-card class="record-card">
+        <template #header>
+          <div class="card-header">
+            <span>电子病历</span>
+            <div class="header-actions">
+              <el-button
+                v-if="!medicalRecordReadonly"
+                type="danger"
+                size="small"
+                @click="generateMedicalRecordFromChat"
+                :loading="generatingRecord"
+              >
+                <el-icon><MagicStick /></el-icon>
+                AI生成病历
+              </el-button>
+              <el-tag v-if="medicalRecordReadonly" size="small" type="info">已保存·只读</el-tag>
+            </div>
+          </div>
+        </template>
+
+        <div class="record-container">
+          <el-form :model="medicalForm" label-width="100px" class="medical-form">
+            <el-form-item label="主诉">
+              <el-input
+                v-model="medicalForm.chiefComplaint"
+                type="textarea"
+                :rows="2"
+                :disabled="medicalRecordReadonly"
+                placeholder="请输入患者主诉"
+              />
+              <div v-if="medicalAiResults.chiefComplaint && !medicalAiResultsTaken.chiefComplaint" class="ai-result-box">
+                <div class="ai-result-label">
+                  <el-icon><MagicStick /></el-icon>
+                  <span>AI生成</span>
+                </div>
+                <div class="ai-result-content">{{ medicalAiResults.chiefComplaint }}</div>
+                <div class="ai-result-actions">
+                  <el-button type="primary" size="small" @click="takeMedicalAiResult('chiefComplaint')">
+                    采纳
+                  </el-button>
+                </div>
+              </div>
+            </el-form-item>
+            <el-form-item label="现病史">
+              <el-input
+                v-model="medicalForm.presentIllness"
+                type="textarea"
+                :rows="2"
+                :disabled="medicalRecordReadonly"
+                placeholder="请输入现病史"
+              />
+              <div v-if="medicalAiResults.presentIllness && !medicalAiResultsTaken.presentIllness" class="ai-result-box">
+                <div class="ai-result-label">
+                  <el-icon><MagicStick /></el-icon>
+                  <span>AI生成</span>
+                </div>
+                <div class="ai-result-content">{{ medicalAiResults.presentIllness }}</div>
+                <div class="ai-result-actions">
+                  <el-button type="primary" size="small" @click="takeMedicalAiResult('presentIllness')">
+                    采纳
+                  </el-button>
+                </div>
+              </div>
+            </el-form-item>
+            <el-form-item label="既往史">
+              <el-input
+                v-model="medicalForm.pastHistory"
+                type="textarea"
+                :rows="2"
+                :disabled="medicalRecordReadonly"
+                placeholder="请输入既往史"
+              />
+              <div v-if="medicalAiResults.pastHistory && !medicalAiResultsTaken.pastHistory" class="ai-result-box">
+                <div class="ai-result-label">
+                  <el-icon><MagicStick /></el-icon>
+                  <span>AI生成</span>
+                </div>
+                <div class="ai-result-content">{{ medicalAiResults.pastHistory }}</div>
+                <div class="ai-result-actions">
+                  <el-button type="primary" size="small" @click="takeMedicalAiResult('pastHistory')">
+                    采纳
+                  </el-button>
+                </div>
+              </div>
+            </el-form-item>
+            <el-form-item label="体格检查">
+              <el-input
+                v-model="medicalForm.physicalExamination"
+                type="textarea"
+                :rows="2"
+                :disabled="medicalRecordReadonly"
+                placeholder="请输入体格检查结果"
+              />
+              <div v-if="medicalAiResults.physicalExamination && !medicalAiResultsTaken.physicalExamination" class="ai-result-box">
+                <div class="ai-result-label">
+                  <el-icon><MagicStick /></el-icon>
+                  <span>AI生成</span>
+                </div>
+                <div class="ai-result-content">{{ medicalAiResults.physicalExamination }}</div>
+                <div class="ai-result-actions">
+                  <el-button type="primary" size="small" @click="takeMedicalAiResult('physicalExamination')">
+                    采纳
+                  </el-button>
+                </div>
+              </div>
+            </el-form-item>
+            <el-form-item label="诊断">
+              <el-input
+                v-model="medicalForm.diagnosis"
+                type="textarea"
+                :rows="2"
+                :disabled="medicalRecordReadonly"
+                placeholder="请输入诊断结果"
+              />
+              <div v-if="medicalAiResults.diagnosis && !medicalAiResultsTaken.diagnosis" class="ai-result-box">
+                <div class="ai-result-label">
+                  <el-icon><MagicStick /></el-icon>
+                  <span>AI生成</span>
+                </div>
+                <div class="ai-result-content">{{ medicalAiResults.diagnosis }}</div>
+                <div class="ai-result-actions">
+                  <el-button type="primary" size="small" @click="takeMedicalAiResult('diagnosis')">
+                    采纳
+                  </el-button>
+                </div>
+              </div>
+            </el-form-item>
+            <el-form-item label="治疗方案">
+              <el-input
+                v-model="medicalForm.treatmentPlan"
+                type="textarea"
+                :rows="2"
+                :disabled="medicalRecordReadonly"
+                placeholder="请输入治疗方案"
+              />
+              <div v-if="medicalAiResults.treatmentPlan && !medicalAiResultsTaken.treatmentPlan" class="ai-result-box">
+                <div class="ai-result-label">
+                  <el-icon><MagicStick /></el-icon>
+                  <span>AI生成</span>
+                </div>
+                <div class="ai-result-content">{{ medicalAiResults.treatmentPlan }}</div>
+                <div class="ai-result-actions">
+                  <el-button type="primary" size="small" @click="takeMedicalAiResult('treatmentPlan')">
+                    采纳
+                  </el-button>
+                </div>
+              </div>
+            </el-form-item>
+          </el-form>
+
+          <div v-if="!medicalRecordReadonly" class="form-actions">
+            <el-button type="primary" @click="saveMedicalRecord" :loading="savingMedicalRecord">
+              <el-icon><Check /></el-icon>
+              保存病历
+            </el-button>
+          </div>
+        </div>
+      </el-card>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted, nextTick, watch } from "vue"
-import { useRoute, useRouter, onBeforeRouteUpdate } from "vue-router"
-import { ArrowLeft, Notebook, Document, Check, Warning, DataAnalysis, MagicStick, Promotion, User, UserFilled } from "@element-plus/icons-vue"
+import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from "vue"
+import { useRoute, useRouter } from "vue-router"
+import { ArrowLeft, Document, Check, MagicStick, Promotion, User, UserFilled } from "@element-plus/icons-vue"
 import { ElMessage, ElMessageBox } from "element-plus"
 import { useRegistrationStore } from "@/stores/registration"
 import { useUserStore } from "@/stores/user"
+import { useMedicalRecordStore } from "@/stores/medicalRecord"
 import { getStatusTag, getStatusLabel } from "@/utils/format"
-import type { RegistrationRecord, ConsultationMessage } from "@/types"
+import type { RegistrationRecord, ConsultationMessage, MedicalRecordForm } from "@/types"
 import {
   getConsultationRecord,
   saveConsultationRecord,
@@ -130,20 +283,23 @@ import {
   type ConsultationRecordRecommendData,
 } from "@/api/doctor"
 import { sendConsultationMessage, getConsultationMessages } from "@/api/consultation"
+import { getMedicalRecordDetail, getMedicalRecordByRegistration } from "@/api/medicalRecord"
 const route = useRoute()
 const router = useRouter()
 const regStore = useRegistrationStore()
 const userStore = useUserStore()
+const recordStore = useMedicalRecordStore()
 
 const loading = ref(false)
 const saving = ref(false)
 const aiRecommending = ref(false)
 const generatingRecord = ref(false)
-const recordGenerated = ref(false)
 const sendingMessage = ref(false)
+const savingMedicalRecord = ref(false)
 const record = ref<RegistrationRecord | null>(null)
 const consultationRecordId = ref<number | null>(null)
 const medicalRecordId = ref<number | null>(null)
+const medicalRecordReadonly = ref(false)
 const registrationId = Number(route.params.registrationId)
 const messageListRef = ref<HTMLElement | null>(null)
 
@@ -186,6 +342,39 @@ const consultForm = reactive({
   treatmentPlan: "",
 })
 
+// 电子病历表单
+const medicalForm = reactive<MedicalRecordForm>({
+  patientId: 0,
+  doctorId: 0,
+  registrationId: undefined,
+  chiefComplaint: "",
+  presentIllness: "",
+  pastHistory: "",
+  physicalExamination: "",
+  diagnosis: "",
+  treatmentPlan: "",
+})
+
+// 病历AI生成结果
+const medicalAiResults = reactive({
+  chiefComplaint: "",
+  presentIllness: "",
+  pastHistory: "",
+  physicalExamination: "",
+  diagnosis: "",
+  treatmentPlan: "",
+})
+
+// 病历AI结果是否已被采纳
+const medicalAiResultsTaken = reactive({
+  chiefComplaint: false,
+  presentIllness: false,
+  pastHistory: false,
+  physicalExamination: false,
+  diagnosis: false,
+  treatmentPlan: false,
+})
+
 const isCompleted = computed(() => record.value?.status === "completed")
 
 onMounted(async () => {
@@ -208,7 +397,7 @@ async function loadRecord() {
       }
     }
     await loadConsultationRecord()
-    await checkMedicalRecord()
+    await loadMedicalRecord()
   } finally {
     loading.value = false
   }
@@ -233,15 +422,20 @@ async function loadConsultationRecord() {
   }
 }
 
-async function checkMedicalRecord() {
+async function loadMedicalRecord() {
   if (!registrationId || !record.value?.patientId) return
   try {
-    const { getMedicalRecordList } = await import("@/api/medicalRecord")
-    const res = await getMedicalRecordList({ patientId: record.value.patientId })
-    const list = res || []
-    const match = list.find((r: any) => r.registrationId === registrationId)
-    if (match) {
-      medicalRecordId.value = match.id
+    const res = await getMedicalRecordByRegistration(registrationId)
+    if (res.code === 200 && res.data) {
+      const data = res.data
+      medicalRecordId.value = data.id
+      medicalRecordReadonly.value = true
+      if (data.chiefComplaint) medicalForm.chiefComplaint = data.chiefComplaint
+      if (data.presentIllness) medicalForm.presentIllness = data.presentIllness
+      if (data.pastHistory) medicalForm.pastHistory = data.pastHistory
+      if (data.physicalExamination) medicalForm.physicalExamination = data.physicalExamination
+      if (data.diagnosis) medicalForm.diagnosis = data.diagnosis
+      if (data.treatmentPlan) medicalForm.treatmentPlan = data.treatmentPlan
     }
   } catch (e) {
     // 没有病历记录是正常情况
@@ -463,46 +657,68 @@ async function completeConsultation() {
 async function generateMedicalRecordFromChat() {
   if (messages.value.length === 0) { ElMessage.warning("暂无对话内容，无法生成病历"); return }
   if (!record.value) { ElMessage.warning("缺少患者信息"); return }
+  if (medicalRecordReadonly.value) { ElMessage.warning("已保存的病历不可修改"); return }
   generatingRecord.value = true
   try {
-    var conversationText = messages.value.map(function(m) { return m.senderName + "(" + (m.senderType === "DOCTOR" ? "医生" : "患者") + "): " + m.content }).join("\n")
-    var res = await fetch("/api/medical-record/generate?patientId=" + record.value.patientId, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ dialogueText: conversationText })
-    })
-    var data = await res.json()
-    if (data.code === 200 && data.data) {
-      sessionStorage.setItem("aiGeneratedRecord", JSON.stringify(data.data))
-      recordGenerated.value = true
-      ElMessage.success("AI病历生成成功，正在跳转...")
-      router.push({ path: "/doctor/medical-record/" + record.value.patientId, query: { registrationId: record.value.id, fromAiGenerate: true } })
+    const conversationText = messages.value.map(function(m) { return m.senderName + "(" + (m.senderType === "DOCTOR" ? "医生" : "患者") + "): " + m.content }).join("\n")
+    const data = await recordStore.generate(record.value.patientId, conversationText)
+    if (data) {
+      Object.keys(medicalAiResultsTaken).forEach(key => { (medicalAiResultsTaken as any)[key] = false })
+      if (data.chiefComplaint) medicalAiResults.chiefComplaint = data.chiefComplaint
+      if (data.presentIllness) medicalAiResults.presentIllness = data.presentIllness
+      if (data.pastHistory) medicalAiResults.pastHistory = data.pastHistory
+      if (data.physicalExamination) medicalAiResults.physicalExamination = data.physicalExamination
+      if (data.diagnosis) medicalAiResults.diagnosis = data.diagnosis
+      if (data.treatmentPlan) medicalAiResults.treatmentPlan = data.treatmentPlan
+      ElMessage.success("AI病历生成成功，请查看并选择采纳")
     } else {
-      ElMessage.error(data.message || "AI生成病历失败")
+      ElMessage.error("AI生成病历失败")
     }
-  } catch (e) {
+  } catch (e: any) {
     ElMessage.error(e?.response?.data?.message || e.message || "AI生成病历失败，请检查网络连接")
   } finally { generatingRecord.value = false }
 }
 
-function goToMedicalRecord() {
-  if (record.value) {
-    router.push(`/doctor/medical-record/${record.value.patientId}?registrationId=${record.value.id}`)
+function takeMedicalAiResult(field: keyof typeof medicalAiResults) {
+  const value = medicalAiResults[field]
+  if (value) {
+    (medicalForm as any)[field] = value
+    medicalAiResultsTaken[field] = true
+    medicalAiResults[field] = ""
+    ElMessage.success("已采纳AI生成内容")
   }
 }
-function viewMedicalRecord() {
-  if (!record.value || !record.value.patientId) {
-    ElMessage.warning("数据加载中，请稍候");
+
+async function saveMedicalRecord() {
+  if (!medicalForm.diagnosis.trim()) {
+    ElMessage.warning("请填写诊断结果")
     return
   }
-  var readonly = medicalRecordId.value || consultationRecordId.value || recordGenerated.value ? "true" : ""
-  var pid = record.value.patientId
-  var rid = record.value.id || registrationId
-  var target = medicalRecordId.value
-    ? `/doctor/medical-record/${pid}?registrationId=${rid}&medicalRecordId=${medicalRecordId.value}`
-    : `/doctor/medical-record/${pid}?registrationId=${rid}` + (readonly ? `&readonly=${readonly}` : "")
-  router.push(target)
+  if (!record.value || !userStore.userId) {
+    ElMessage.warning("缺少患者或医生信息")
+    return
+  }
+
+  savingMedicalRecord.value = true
+  try {
+    medicalForm.patientId = record.value.patientId
+    medicalForm.doctorId = userStore.userId
+    medicalForm.registrationId = registrationId || undefined
+    const savedRecord = await recordStore.save(medicalForm)
+    if (savedRecord) {
+      medicalRecordId.value = savedRecord.id
+      medicalRecordReadonly.value = true
+      ElMessage.success("病历保存成功")
+    }
+  } catch (e: any) {
+    console.error("保存病历失败", e)
+    const errMsg = e?.response?.data?.message || e?.message || "保存失败"
+    ElMessage.error(errMsg)
+  } finally {
+    savingMedicalRecord.value = false
+  }
 }
+
 function goToPrescription() {
   if (record.value) {
     router.push(`/doctor/prescription/${record.value.patientId}?registrationId=${record.value.id}`)
@@ -518,16 +734,10 @@ function goToHistory() {
 }
 
 
-let pollTimer = null
+let pollTimer: any = null
 onMounted(() => {
   if (record.value?.status !== "completed") {
     pollTimer = setInterval(() => { loadMessages() }, 5000)
-  }
-})
-// 监听路由变化（保存病历后返回时重新检查）
-onBeforeRouteUpdate((to) => {
-  if (to.query.saved) {
-    setTimeout(() => checkMedicalRecord(), 500)
   }
 })
 
@@ -667,11 +877,13 @@ onUnmounted(() => {
   margin-top: 8px;
 }
 
-/* 右侧问诊记录卡片 */
+/* 右侧病历卡片 */
 .record-card {
-  width: 480px;
+  width: 520px;
   flex-shrink: 0;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 .card-header {
   display: flex;
@@ -682,16 +894,23 @@ onUnmounted(() => {
   display: flex;
   gap: 8px;
 }
-.consult-form :deep(.el-textarea__inner) {
+.record-container {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.medical-form :deep(.el-textarea__inner) {
   font-size: 13px;
 }
-.consult-form :deep(.el-form-item) {
+.medical-form :deep(.el-form-item) {
   margin-bottom: 14px;
 }
 .form-actions {
   display: flex;
   justify-content: center;
-  margin-top: 16px;
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid #ebeef5;
 }
 
 /* AI推荐结果样式 */

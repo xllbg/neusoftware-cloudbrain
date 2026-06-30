@@ -223,10 +223,17 @@ public class RegistrationService {
         Registration registration = registrationRepository.findById(registrationId)
                 .orElseThrow(() -> new BusinessException(404, "挂号记录不存在"));
 
-        if (registration.getDoctorId() == null) {
-            // 急诊科挂号（doctorId为null），任何医生都可以接诊
+        Doctor doctor = doctorRepository.findById(doctorId).orElse(null);
+        String doctorDepartment = doctor != null ? doctor.getDepartment() : null;
+
+        if ("急诊科".equals(registration.getDepartment())) {
+            // 急诊科挂号：所有急诊科医生都可以接诊
+            if (!"急诊科".equals(doctorDepartment)) {
+                throw new BusinessException(403, "只有急诊科医生可以接诊急诊号");
+            }
+            // 接诊后更新为当前接诊医生
             registration.setDoctorId(doctorId);
-        } else if (!registration.getDoctorId().equals(doctorId)) {
+        } else if (registration.getDoctorId() == null || !registration.getDoctorId().equals(doctorId)) {
             throw new BusinessException(403, "无权接诊此挂号");
         }
 

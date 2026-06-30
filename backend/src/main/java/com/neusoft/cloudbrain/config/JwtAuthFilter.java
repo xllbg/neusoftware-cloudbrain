@@ -58,6 +58,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             "/api/medical-record/list",
             "/api/medical-record/detail",
             "/api/medical-record/detail/**",
+            "/api/medical-record/by-registration/**",
             "/api/prescription/create",
             "/api/prescription/check/**",
             "/api/prescription/recommend",
