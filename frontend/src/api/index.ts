@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from "axios"
 import { ElMessage, ElLoading, ElMessageBox } from "element-plus"
-import { getToken, removeToken } from "@/utils/auth"
+import { getDoctorToken, getPatientToken, removeDoctorToken, removePatientToken } from "@/utils/auth"
 import router from "@/router"
 
 // 加载状态管理
@@ -18,7 +18,17 @@ const request: AxiosInstance = axios.create({
 // ===== 请求拦截器 =====
 request.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = getToken()
+    // 根据当前路由路径判断使用哪个 token
+    const path = router.currentRoute.value.path
+    let token: string | null = null
+    if (path.startsWith("/doctor")) {
+      token = getDoctorToken()
+    } else if (path.startsWith("/patient")) {
+      token = getPatientToken()
+    } else {
+      // 其他路径优先使用医生 token
+      token = getDoctorToken() || getPatientToken()
+    }
     if (token && config.headers) {
       config.headers["Authorization"] = `Bearer ${token}`
     }
@@ -39,7 +49,9 @@ request.interceptors.response.use(
       return res
     }
     if (res.code === 401) {
-      removeToken()
+      // 401 时清除两个 token（简化处理，不区分角色）
+      removeDoctorToken()
+      removePatientToken()
       ElMessage.error("登录已过期，请重新登录")
       router.push("/patient/login")
       return Promise.reject(new Error(res.message || "未授权"))
@@ -69,7 +81,8 @@ request.interceptors.response.use(
       const status = error.response.status
       switch (status) {
         case 401:
-          removeToken()
+          removeDoctorToken()
+          removePatientToken()
           ElMessage.error("登录已过期，请重新登录")
           router.push("/patient/login")
           break

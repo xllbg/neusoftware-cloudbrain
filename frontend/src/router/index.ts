@@ -1,6 +1,7 @@
-import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router"
+import { createRouter, createWebHistory } from "vue-router"
 import { ElMessage } from "element-plus"
 import { isLoggedIn, isPatient, isDoctor } from "@/utils/auth"
+import { useUserStore } from "@/stores/user"
 
 // 患者端手机布局（包装所有患者页面）
 const PatientLayout = () => import("@/components/PatientLayout.vue")
@@ -146,6 +147,9 @@ router.beforeEach((to, _from, next) => {
   document.title = (to.meta.title as string)
     ? `${to.meta.title} - 智慧云脑诊疗平台`
     : "智慧云脑诊疗平台"
+
+  const userStore = useUserStore()
+  userStore.refreshFromStorage()
 
   const requiresAuth = to.meta.requiresAuth as boolean
   const role = to.meta.role as string | undefined
