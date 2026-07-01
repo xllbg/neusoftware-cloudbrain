@@ -72,6 +72,7 @@ public class SecurityConfig {
                     "/api/prescription/list",
                     "/api/prescription/detail",
                     "/api/prescription/detail/**",
+                    "/api/prescription/by-registration/**",
                     "/api/consultation-record/save",
                     "/api/consultation-record/get",
                     "/api/consultation-record/recommend",

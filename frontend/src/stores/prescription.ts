@@ -1,7 +1,7 @@
 import { defineStore } from "pinia"
 import { ref } from "vue"
 import type { PrescriptionRecord, PrescriptionForm, AiCheckResult, PrescriptionMedicineItem } from "@/types"
-import { createPrescription, getPrescriptionList, getPrescriptionDetail, checkPrescription, recommendMedicine, aiCheckPrescription, getPrescriptionCheckResult } from "@/api/prescription"
+import { createPrescription, getPrescriptionList, getPrescriptionDetail, getPrescriptionByRegistration, checkPrescription, recommendMedicine, aiCheckPrescription, getPrescriptionCheckResult } from "@/api/prescription"
 
 export const usePrescriptionStore = defineStore("prescription", () => {
   const records = ref<PrescriptionRecord[]>([])
@@ -28,6 +28,16 @@ export const usePrescriptionStore = defineStore("prescription", () => {
     try {
       const res = await getPrescriptionDetail(id)
       currentRecord.value = res.data
+      return res.data
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function fetchByRegistration(registrationId: number) {
+    loading.value = true
+    try {
+      const res = await getPrescriptionByRegistration(registrationId)
       return res.data
     } finally {
       loading.value = false
@@ -79,5 +89,5 @@ export const usePrescriptionStore = defineStore("prescription", () => {
     return null
   }
 
-  return { records, currentRecord, loading, fetchList, fetchDetail, create, check, checkWithAi, recommend, saveCheckResult, getCheckResult }
+  return { records, currentRecord, loading, fetchList, fetchDetail, fetchByRegistration, create, check, checkWithAi, recommend, saveCheckResult, getCheckResult }
 })

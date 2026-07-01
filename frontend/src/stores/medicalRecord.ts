@@ -4,6 +4,7 @@ import type { MedicalRecord, MedicalRecordForm, AiMedicalRecordResult } from "@/
 import {
   getMedicalRecordList,
   getMedicalRecordDetail,
+  getMedicalRecordByRegistration,
   saveMedicalRecord,
   generateMedicalRecord,
 } from "@/api/medicalRecord"
@@ -44,10 +45,20 @@ export const useMedicalRecordStore = defineStore("medicalRecord", () => {
     return res.data
   }
 
+  async function fetchByRegistration(registrationId: number) {
+    loading.value = true
+    try {
+      const res = await getMedicalRecordByRegistration(registrationId)
+      return res.data
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function generate(patientId: number, dialogueText: string) {
     const res = await generateMedicalRecord(patientId, dialogueText)
     return res.data as AiMedicalRecordResult
   }
 
-  return { records, currentRecord, loading, fetchList, fetchDetail, save, generate }
+  return { records, currentRecord, loading, fetchList, fetchDetail, fetchByRegistration, save, generate }
 })

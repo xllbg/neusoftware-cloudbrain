@@ -96,6 +96,11 @@ public class PrescriptionService {
                 .orElseThrow(() -> new BusinessException(404, "处方不存在"));
     }
 
+    public Prescription getPrescriptionByRegistration(Long registrationId) {
+        List<Prescription> list = prescriptionRepository.findByRegistrationId(registrationId);
+        return list != null && !list.isEmpty() ? list.get(0) : null;
+    }
+
     @Transactional
     public PrescriptionCheck saveCheckResult(Long prescriptionId, String checkResult,
             String medicationSuggestions, String interactionDetection,

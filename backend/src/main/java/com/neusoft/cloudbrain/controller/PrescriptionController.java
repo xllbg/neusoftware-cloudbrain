@@ -184,6 +184,16 @@ public class PrescriptionController {
         return CommonResult.success(toResponse(prescription));
     }
 
+    @GetMapping("/by-registration/{registrationId}")
+    @Operation(summary = "根据挂号ID获取处方", description = "根据挂号ID获取处方")
+    public CommonResult<PrescriptionResponse> getByRegistration(@PathVariable Long registrationId) {
+        Prescription prescription = prescriptionService.getPrescriptionByRegistration(registrationId);
+        if (prescription == null) {
+            return CommonResult.success(null);
+        }
+        return CommonResult.success(toResponse(prescription));
+    }
+
     @PostMapping("/recommend")
     @Operation(summary = "AI推荐药品", description = "根据症状、诊断和对话记录推荐药品")
     public CommonResult<List<Map<String, String>>> recommendMedicine(

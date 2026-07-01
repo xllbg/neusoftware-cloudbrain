@@ -13,6 +13,10 @@ export function getPrescriptionDetail(id: number) {
   return get<PrescriptionRecord>("/prescription/detail", { id })
 }
 
+export function getPrescriptionByRegistration(registrationId: number) {
+  return get<PrescriptionRecord>(`/prescription/by-registration/${registrationId}`)
+}
+
 export function checkPrescription(prescriptionId: number) {
   return post<AiCheckResult>(`/prescription/check/${prescriptionId}`)
 }
