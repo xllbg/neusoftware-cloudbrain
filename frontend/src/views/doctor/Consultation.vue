@@ -69,6 +69,29 @@
             </div>
           </div>
 
+          <!-- 快捷导入对话 -->
+          <div v-if="showImportDialog" class="import-dialog-area">
+            <div class="import-dialog-header">
+              <span>粘贴对话文本，自动按角色导入</span>
+              <el-button size="small" @click="showImportDialog = false">
+                <el-icon><Close /></el-icon>
+              </el-button>
+            </div>
+            <div class="import-hint">格式：每行以「医生：」或「患者：」开头</div>
+            <el-input
+              v-model="importDialogText"
+              type="textarea"
+              :rows="4"
+              placeholder="医生：你好，哪里不舒服？&#10;患者：我身上发痒，打喷嚏&#10;医生：有没有胸闷？&#10;患者：没有"
+            />
+            <div class="import-actions">
+              <el-button size="small" @click="showImportDialog = false">取消</el-button>
+              <el-button type="primary" size="small" @click="handleImportDialog" :loading="importingDialog">
+                一键导入
+              </el-button>
+            </div>
+          </div>
+
           <!-- 消息输入区域 -->
           <div class="message-input-area">
             <el-input
@@ -90,6 +113,10 @@
               <div class="toolbar-left">
                 <el-button size="small" :type="isListening ? 'danger' : 'default'" @click="toggleVoiceInput" :disabled="isCompleted">
                   <el-icon><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg></el-icon>{{ isListening ? '停止录音' : '语音输入' }}</el-button>
+                <el-button size="small" @click="showImportDialog = !showImportDialog" :disabled="isCompleted">
+                  <el-icon><Upload /></el-icon>
+                  导入对话
+                </el-button>
                 <span v-if="voiceTranscript" class="voice-hint">{{ voiceTranscript }}</span>
               </div>
               <div class="toolbar-right">
@@ -301,7 +328,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from "vue"
 import { useRoute, useRouter } from "vue-router"
-import { ArrowLeft, Document, Check, MagicStick, Promotion, User, UserFilled, Expand, Fold } from "@element-plus/icons-vue"
+import { ArrowLeft, Document, Check, MagicStick, Promotion, User, UserFilled, Expand, Fold, Upload, Close } from "@element-plus/icons-vue"
 import { ElMessage, ElMessageBox } from "element-plus"
 import { useRegistrationStore } from "@/stores/registration"
 import { useUserStore } from "@/stores/user"
@@ -341,6 +368,9 @@ const aiStreamStatus = ref("正在整理问诊记录")
 const aiStreamStep = ref(0)
 const aiStreamCompleted = ref(false)
 const aiStreamCollapsed = ref(false)
+const showImportDialog = ref(false)
+const importDialogText = ref("")
+const importingDialog = ref(false)
 const aiStreamSteps = [
   "整理",
   "主诉",
@@ -571,6 +601,63 @@ async function handleSendMessage() {
     ElMessage.error(e?.message || "发送失败")
   } finally {
     sendingMessage.value = false
+  }
+}
+
+async function handleImportDialog() {
+  const text = importDialogText.value.trim()
+  if (!text) { ElMessage.warning("请输入对话文本"); return }
+
+  const lines = text.split("\n").map(l => l.trim()).filter(Boolean)
+  const entries: { senderType: string; content: string }[] = []
+
+  for (const line of lines) {
+    let senderType: string | null = null
+    let content = ""
+    if (line.startsWith("医生：") || line.startsWith("医生:")) {
+      senderType = "DOCTOR"
+      content = line.replace(/^医生[：:]/, "").trim()
+    } else if (line.startsWith("患者：") || line.startsWith("患者:")) {
+      senderType = "PATIENT"
+      content = line.replace(/^患者[：:]/, "").trim()
+    }
+    if (senderType && content) {
+      entries.push({ senderType, content })
+    }
+  }
+
+  if (entries.length === 0) { ElMessage.warning("未识别到有效对话，请确保每行以「医生：」或「患者：」开头"); return }
+
+  importingDialog.value = true
+  let successCount = 0
+  try {
+    for (let i = 0; i < entries.length; i++) {
+      const entry = entries[i]
+      let senderId = userStore.userId
+      if (entry.senderType === "PATIENT" && record.value) {
+        senderId = record.value.patientId
+      }
+      const res = await sendConsultationMessage({
+        registrationId: registrationId,
+        senderType: entry.senderType,
+        senderId: senderId,
+        content: entry.content,
+      })
+      if (res.code === 200 && res.data) {
+        messages.value.push(res.data)
+        successCount++
+      }
+      await nextTick()
+      scrollToBottom()
+      await new Promise(r => setTimeout(r, 300))
+    }
+    ElMessage.success(`成功导入 ${successCount} 条对话`)
+    importDialogText.value = ""
+    showImportDialog.value = false
+  } catch (e: any) {
+    ElMessage.error(e?.message || "导入失败")
+  } finally {
+    importingDialog.value = false
   }
 }
 
@@ -1156,6 +1243,34 @@ onUnmounted(() => {
 }
 .ai-stream-content.collapsed {
   padding-bottom: 6px;
+}
+
+.import-dialog-area {
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+.import-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.import-dialog-header span {
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+}
+.import-hint {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+.import-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
 }
 .typing-dot {
   animation: blink 1s infinite;
