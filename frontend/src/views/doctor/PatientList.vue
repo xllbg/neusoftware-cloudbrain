@@ -68,7 +68,7 @@
               <div class="triage-recommendation">{{ row.triageResult }}</div>
             </div>
             <div v-else class="no-triage">
-              <el-tag type="info" size="small">未使用</el-tag>
+              <el-tag type="info" size="small">无</el-tag>
             </div>
           </template>
         </el-table-column>

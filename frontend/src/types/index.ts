@@ -12,6 +12,11 @@ export interface LoginResult {
   username: string
   name: string
   role: string
+  phone?: string
+  gender?: string
+  age?: number
+  idCard?: string
+  address?: string
 }
 
 export interface LoginForm {
@@ -74,6 +79,7 @@ export interface RegistrationForm {
   registrationDate: string
   timeSlot: string
   symptom?: string
+  triageResult?: string
 }
 
 export interface RegistrationRecord {

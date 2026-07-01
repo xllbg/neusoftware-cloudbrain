@@ -271,12 +271,14 @@ function getConfidenceColor(confidence: number): string {
 function goToRegistration() {
   if (result.value) {
     const firstDoctor = result.value.doctors?.[0]
+    const triageText = `建议${result.value.department}就诊，${result.value.reasoning}`
     router.push({
       path: "/patient/registration",
       query: {
         department: result.value.department,
         doctorId: firstDoctor?.id?.toString() || "",
         doctorName: firstDoctor?.name || "",
+        triageResult: triageText,
       }
     })
   } else {

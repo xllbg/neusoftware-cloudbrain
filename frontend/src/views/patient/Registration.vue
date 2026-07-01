@@ -113,6 +113,7 @@ const selectedDate = ref("")
 const selectedTimeSlot = ref("MORNING")
 const symptom = ref("")
 const submitting = ref(false)
+const triageResult = ref("")
 
 // 急诊科不需要选择医生
 const isEmergencyDepartment = computed(() => selectedDepartment.value === "急诊科")
@@ -139,6 +140,9 @@ onMounted(async () => {
     }
     if (query.doctorId) {
       selectedDoctorId.value = parseInt(query.doctorId as string)
+    }
+    if (query.triageResult) {
+      triageResult.value = query.triageResult as string
     }
   } catch {
     departments.value = ["心内科", "呼吸内科", "神经内科", "消化内科", "骨科", "儿科", "内科", "普外科", "急诊科"]
@@ -168,6 +172,7 @@ async function handleSubmit() {
       registrationDate: selectedDate.value,
       timeSlot: selectedTimeSlot.value,
       symptom: symptom.value,
+      triageResult: triageResult.value || undefined,
     })
     ElMessage.success("挂号成功！")
     router.push("/patient/my-registrations")
