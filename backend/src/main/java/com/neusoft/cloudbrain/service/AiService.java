@@ -476,6 +476,111 @@ public class AiService {
         return callDeepSeekApi(prompt);
     }
 
+    public void streamMedicalRecord(String dialogueText, String symptoms, String department,
+                                    java.util.function.Consumer<String> onChunk,
+                                    Runnable onComplete,
+                                    java.util.function.Consumer<Exception> onError) {
+        log.info("========== AI病历流式生成开始 ==========");
+
+        StringBuilder promptBuilder = new StringBuilder();
+        promptBuilder.append("你是资深病历书写专家。请根据以下患者信息，生成规范、完整的结构化电子病历。\n\n");
+
+        promptBuilder.append("【患者信息】\n");
+        if (department != null && !department.isBlank()) {
+            promptBuilder.append("就诊科室：").append(department).append("\n");
+        }
+        if (symptoms != null && !symptoms.isBlank()) {
+            promptBuilder.append("患者自述症状：").append(symptoms).append("\n");
+        }
+
+        if (dialogueText != null && !dialogueText.isBlank()) {
+            promptBuilder.append("\n【医患对话记录】\n").append(dialogueText).append("\n");
+        }
+
+        promptBuilder.append("\n【病历生成要求】\n");
+        promptBuilder.append("请以JSON格式返回，包含以下字段：\n");
+        promptBuilder.append("chiefComplaint: 主诉（简明扼要，20字以内）\n");
+        promptBuilder.append("presentIllness: 现病史（详细描述发病时间、诱因、主要症状特点、伴随症状、诊治经过等）\n");
+        promptBuilder.append("pastHistory: 既往史（既往健康状况、疾病史、手术史、过敏史等）\n");
+        promptBuilder.append("physicalExamination: 体格检查（根据症状推断相关检查项目和可能的结果）\n");
+        promptBuilder.append("diagnosis: 初步诊断（根据信息给出最可能的诊断）\n");
+        promptBuilder.append("treatmentPlan: 治疗意见（包括药物治疗、生活方式建议、复诊建议等）\n\n");
+        promptBuilder.append("要求：\n");
+        promptBuilder.append("1. 内容要真实、合理、符合医学规范\n");
+        promptBuilder.append("2. 根据提供的信息合理推断，信息不足的地方可以留空或写\"待进一步检查\"\n");
+        promptBuilder.append("3. 语言专业、准确，符合病历书写规范\n");
+        promptBuilder.append("4. 只返回JSON，不要其他任何文字");
+
+        String prompt = promptBuilder.toString();
+        String url = baseUrl + "/chat/completions";
+
+        try {
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+            headers.set("Authorization", "Bearer " + apiKey);
+            headers.set("Accept", "text/event-stream");
+
+            java.util.Map<String, Object> body = new java.util.HashMap<>();
+            body.put("model", model);
+            body.put("messages", java.util.List.of(java.util.Map.of("role", "user", "content", prompt)));
+            body.put("max_tokens", 2000);
+            body.put("temperature", 0.1);
+            body.put("stream", true);
+
+            org.springframework.http.HttpEntity<java.util.Map<String, Object>> entity =
+                    new org.springframework.http.HttpEntity<>(body, headers);
+
+            restTemplate.execute(url, org.springframework.http.HttpMethod.POST,
+                    request -> {
+                        request.getHeaders().addAll(headers);
+                        try (java.io.OutputStream os = request.getBody()) {
+                            objectMapper.writeValue(os, body);
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    },
+                    response -> {
+                        try (java.io.BufferedReader reader = new java.io.BufferedReader(
+                                new java.io.InputStreamReader(response.getBody(), java.nio.charset.StandardCharsets.UTF_8))) {
+                            String line;
+                            StringBuilder contentBuilder = new StringBuilder();
+                            while ((line = reader.readLine()) != null) {
+                                if (line.startsWith("data: ")) {
+                                    String data = line.substring(6);
+                                    if ("[DONE]".equals(data)) {
+                                        onComplete.run();
+                                        return null;
+                                    }
+                                    try {
+                                        com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(data);
+                                        String delta = root.path("choices")
+                                                .path(0)
+                                                .path("delta")
+                                                .path("content")
+                                                .asText();
+                                        if (delta != null && !delta.isEmpty()) {
+                                            contentBuilder.append(delta);
+                                            onChunk.accept(delta);
+                                        }
+                                    } catch (Exception e) {
+                                        log.debug("解析SSE数据块失败: {}", data);
+                                    }
+                                }
+                            }
+                            onComplete.run();
+                        } catch (Exception e) {
+                            log.error("流式读取失败", e);
+                            onError.accept(e);
+                        }
+                        return null;
+                    }
+            );
+        } catch (Exception e) {
+            log.error("流式调用AI失败", e);
+            onError.accept(e);
+        }
+    }
+
     public String optimizeMedicalRecord(String chiefComplaint, String presentIllness,
             String pastHistory, String physicalExamination, String diagnosis,
             String treatmentPlan) {

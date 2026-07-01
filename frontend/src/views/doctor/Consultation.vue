@@ -52,7 +52,7 @@
             >
               <div class="message-avatar">
                 <el-avatar :size="36">
-                  {{ msg.senderName?.charAt(0) || msg.senderType === 'DOCTOR' ? '医' : '患' }}
+                  {{ msg.senderType === 'DOCTOR' ? '医' : '患' }}
                 </el-avatar>
               </div>
               <div class="message-body">
@@ -125,6 +125,38 @@
         </template>
 
         <div class="record-container">
+          <div v-if="aiStreaming || aiStreamContent" class="ai-stream-box">
+            <div class="ai-stream-header">
+              <el-icon><MagicStick /></el-icon>
+              <span class="ai-stream-status">
+                <span>{{ aiStreamStatus }}</span>
+                <span v-if="aiStreaming" class="typing-dot">.</span>
+              </span>
+            </div>
+            <div v-if="!aiStreamCompleted" class="ai-stream-steps-custom">
+              <div
+                v-for="(step, index) in aiStreamSteps"
+                :key="step"
+                class="step-item"
+                :class="{ active: index === aiStreamStep, completed: index < aiStreamStep }"
+              >
+                <div class="step-icon">{{ index + 1 }}</div>
+                <div class="step-label">{{ step }}</div>
+              </div>
+            </div>
+            <div class="ai-stream-content" :class="{ collapsed: aiStreamCollapsed }">
+              <div class="ai-stream-content-header">
+                <span>AI 生成内容</span>
+                <el-button size="small" @click="aiStreamCollapsed = !aiStreamCollapsed">
+                  <el-icon v-if="aiStreamCollapsed"><Expand /></el-icon>
+                  <el-icon v-else><Fold /></el-icon>
+                  {{ aiStreamCollapsed ? '展开' : '折叠' }}
+                </el-button>
+              </div>
+              <pre v-show="!aiStreamCollapsed">{{ aiStreamContent }}</pre>
+            </div>
+          </div>
+
           <el-form :model="medicalForm" label-width="100px" class="medical-form">
             <el-form-item label="主诉">
               <el-input
@@ -269,7 +301,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from "vue"
 import { useRoute, useRouter } from "vue-router"
-import { ArrowLeft, Document, Check, MagicStick, Promotion, User, UserFilled } from "@element-plus/icons-vue"
+import { ArrowLeft, Document, Check, MagicStick, Promotion, User, UserFilled, Expand, Fold } from "@element-plus/icons-vue"
 import { ElMessage, ElMessageBox } from "element-plus"
 import { useRegistrationStore } from "@/stores/registration"
 import { useUserStore } from "@/stores/user"
@@ -283,7 +315,7 @@ import {
   type ConsultationRecordRecommendData,
 } from "@/api/doctor"
 import { sendConsultationMessage, getConsultationMessages } from "@/api/consultation"
-import { getMedicalRecordDetail, getMedicalRecordByRegistration } from "@/api/medicalRecord"
+import { getMedicalRecordDetail, getMedicalRecordByRegistration, streamGenerateMedicalRecord } from "@/api/medicalRecord"
 const route = useRoute()
 const router = useRouter()
 const regStore = useRegistrationStore()
@@ -302,6 +334,24 @@ const medicalRecordId = ref<number | null>(null)
 const medicalRecordReadonly = ref(false)
 const registrationId = Number(route.params.registrationId)
 const messageListRef = ref<HTMLElement | null>(null)
+
+const aiStreaming = ref(false)
+const aiStreamContent = ref("")
+const aiStreamStatus = ref("正在整理问诊记录")
+const aiStreamStep = ref(0)
+const aiStreamCompleted = ref(false)
+const aiStreamCollapsed = ref(false)
+const aiStreamSteps = [
+  "整理",
+  "主诉",
+  "现病史",
+  "既往史",
+  "体检",
+  "诊断",
+  "建议",
+  "解析",
+  "完成",
+]
 
 // 聊天消息
 const messages = ref<ConsultationMessage[]>([])
@@ -656,12 +706,66 @@ async function generateMedicalRecordFromChat() {
   if (messages.value.length === 0) { ElMessage.warning("暂无对话内容，无法生成病历"); return }
   if (!record.value) { ElMessage.warning("缺少患者信息"); return }
   if (medicalRecordReadonly.value) { ElMessage.warning("已保存的病历不可修改"); return }
+  if (aiStreaming.value) { ElMessage.warning("AI正在生成中，请稍候"); return }
+
+  aiStreaming.value = true
   generatingRecord.value = true
+  aiStreamContent.value = ""
+  aiStreamStatus.value = "正在整理问诊记录"
+  aiStreamStep.value = 0
+  aiStreamCompleted.value = false
+
+  Object.keys(medicalAiResultsTaken).forEach(key => { (medicalAiResultsTaken as any)[key] = false })
+  Object.keys(medicalAiResults).forEach(key => { (medicalAiResults as any)[key] = "" })
+
   try {
     const conversationText = messages.value.map(function(m) { return m.senderName + "(" + (m.senderType === "DOCTOR" ? "医生" : "患者") + "): " + m.content }).join("\n")
-    const data = await recordStore.generate(record.value.patientId, conversationText)
+    aiStreamStatus.value = "正在提取主诉"
+    aiStreamStep.value = 1
+    const fullText = await streamGenerateMedicalRecord(
+      {
+        patientId: record.value.patientId,
+        dialogueText: conversationText,
+        symptoms: record.value.symptom,
+        department: record.value.department,
+      },
+      (chunk) => {
+        aiStreamContent.value += chunk
+        if (aiStreamContent.value.length > 80 && aiStreamStatus.value === "正在提取主诉") {
+          aiStreamStatus.value = "正在生成现病史"
+          aiStreamStep.value = 2
+        } else if (aiStreamContent.value.length > 220 && aiStreamStatus.value === "正在生成现病史") {
+          aiStreamStatus.value = "正在生成既往史"
+          aiStreamStep.value = 3
+        } else if (aiStreamContent.value.length > 360 && aiStreamStatus.value === "正在生成既往史") {
+          aiStreamStatus.value = "正在生成体格检查"
+          aiStreamStep.value = 4
+        } else if (aiStreamContent.value.length > 520 && aiStreamStatus.value === "正在生成体格检查") {
+          aiStreamStatus.value = "正在生成初步诊断"
+          aiStreamStep.value = 5
+        } else if (aiStreamContent.value.length > 680 && aiStreamStatus.value === "正在生成初步诊断") {
+          aiStreamStatus.value = "正在生成治疗建议"
+          aiStreamStep.value = 6
+        }
+      }
+    )
+
+    aiStreamStatus.value = "正在解析生成结果"
+    aiStreamStep.value = 7
+    let data: any = null
+    try {
+      let cleaned = fullText.trim()
+      if (cleaned.startsWith("```json")) cleaned = cleaned.slice(7).trim()
+      if (cleaned.startsWith("```")) cleaned = cleaned.slice(3).trim()
+      if (cleaned.endsWith("```")) cleaned = cleaned.slice(0, -3).trim()
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
+      if (jsonMatch) cleaned = jsonMatch[0]
+      data = JSON.parse(cleaned)
+    } catch (e) {
+      console.warn("解析AI返回JSON失败", e)
+    }
+
     if (data) {
-      Object.keys(medicalAiResultsTaken).forEach(key => { (medicalAiResultsTaken as any)[key] = false })
       if (data.chiefComplaint) medicalAiResults.chiefComplaint = data.chiefComplaint
       if (data.presentIllness) medicalAiResults.presentIllness = data.presentIllness
       if (data.pastHistory) medicalAiResults.pastHistory = data.pastHistory
@@ -670,11 +774,23 @@ async function generateMedicalRecordFromChat() {
       if (data.treatmentPlan) medicalAiResults.treatmentPlan = data.treatmentPlan
       ElMessage.success("AI病历生成成功，请查看并选择采纳")
     } else {
-      ElMessage.error("AI生成病历失败")
+      ElMessage.warning("AI返回格式异常，请手动提取关键信息")
     }
   } catch (e: any) {
-    ElMessage.error(e?.response?.data?.message || e.message || "AI生成病历失败，请检查网络连接")
-  } finally { generatingRecord.value = false }
+    ElMessage.error(e?.message || "AI生成病历失败，请检查网络连接")
+  } finally {
+    aiStreaming.value = false
+    aiStreamStatus.value = aiStreamContent.value ? "生成完成，已可采纳" : "等待生成结果"
+    aiStreamStep.value = aiStreamContent.value ? 8 : 0
+    generatingRecord.value = false
+    if (aiStreamContent.value) {
+      setTimeout(() => {
+        aiStreamCompleted.value = true
+      }, 800)
+    } else {
+      aiStreamCompleted.value = false
+    }
+  }
 }
 
 function takeMedicalAiResult(field: keyof typeof medicalAiResults) {
@@ -945,5 +1061,124 @@ onUnmounted(() => {
 .ai-result-actions {
   display: flex;
   justify-content: flex-end;
+}
+
+.ai-stream-box {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 1px solid #7dd3fc;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+.ai-stream-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0284c7;
+  margin-bottom: 10px;
+}
+.ai-stream-steps-custom {
+  margin: 8px 0 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.65);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  min-width: 60px;
+  transition: all 0.3s ease;
+}
+.step-item.completed {
+  background: #dcfce7;
+  border-color: #86efac;
+}
+.step-item.active {
+  background: #dbeafe;
+  border-color: #60a5fa;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+}
+.step-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+.step-item.completed .step-icon {
+  background: #4ade80;
+  color: white;
+}
+.step-item.active .step-icon {
+  background: #3b82f6;
+  color: white;
+}
+.step-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #475569;
+}
+.step-item.completed .step-label {
+  color: #15803d;
+}
+.step-item.active .step-label {
+  color: #1d4ed8;
+}
+.ai-stream-content-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #e2e8f0;
+}
+.ai-stream-content-header span {
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+}
+.ai-stream-content.collapsed {
+  padding-bottom: 6px;
+}
+.typing-dot {
+  animation: blink 1s infinite;
+}
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+.ai-stream-content {
+  background: white;
+  border-radius: 6px;
+  padding: 10px 12px;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid #bae6fd;
+}
+.ai-stream-content pre {
+  margin: 0;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #334155;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 </style>

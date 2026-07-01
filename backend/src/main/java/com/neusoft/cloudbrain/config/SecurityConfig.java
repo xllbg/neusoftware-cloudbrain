@@ -56,6 +56,7 @@ public class SecurityConfig {
                     "/api/consultation/send",
                     "/api/consultation/messages",
                     "/api/medical-record/generate",
+                    "/api/medical-record/generate-stream",
                     "/api/medical-record/optimize",
                     "/api/medical-record/save",
                     "/api/medical-record/list",

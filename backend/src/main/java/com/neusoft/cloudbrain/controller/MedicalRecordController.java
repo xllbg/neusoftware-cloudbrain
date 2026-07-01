@@ -9,14 +9,20 @@ import com.neusoft.cloudbrain.entity.Patient;
 import com.neusoft.cloudbrain.repository.DoctorRepository;
 import com.neusoft.cloudbrain.repository.PatientRepository;
 import com.neusoft.cloudbrain.service.MedicalRecordService;
+import com.neusoft.cloudbrain.service.AiService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 @RestController
@@ -28,6 +34,9 @@ public class MedicalRecordController {
     private final MedicalRecordService medicalRecordService;
     private final PatientRepository patientRepository;
     private final DoctorRepository doctorRepository;
+    private final AiService aiService;
+
+    private static final ExecutorService EXECUTOR = Executors.newCachedThreadPool();
 
     @PostMapping("/generate")
     @Operation(summary = "AI生成病历", description = "根据对话文本AI生成结构化病历")
@@ -47,6 +56,61 @@ public class MedicalRecordController {
                 .build();
 
         return CommonResult.success(aiResult);
+    }
+
+    @PostMapping(value = "/generate-stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(summary = "AI流式生成病历", description = "SSE流式输出AI生成的病历内容")
+    public SseEmitter generateStream(
+            @RequestParam(required = false) Long patientId,
+            @RequestBody Map<String, String> request) {
+        String dialogueText = request.getOrDefault("dialogueText", "");
+        String symptoms = request.getOrDefault("symptoms", "");
+        String department = request.getOrDefault("department", "");
+
+        SseEmitter emitter = new SseEmitter(60000L);
+
+        EXECUTOR.submit(() -> {
+            try {
+                StringBuilder fullContent = new StringBuilder();
+                aiService.streamMedicalRecord(
+                        dialogueText, symptoms, department,
+                        chunk -> {
+                            try {
+                                fullContent.append(chunk);
+                                emitter.send(SseEmitter.event()
+                                        .name("chunk")
+                                        .data(chunk));
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
+                        },
+                        () -> {
+                            try {
+                                emitter.send(SseEmitter.event()
+                                        .name("done")
+                                        .data(fullContent.toString()));
+                                emitter.complete();
+                            } catch (IOException e) {
+                                emitter.completeWithError(e);
+                            }
+                        },
+                        error -> {
+                            try {
+                                emitter.send(SseEmitter.event()
+                                        .name("error")
+                                        .data(error.getMessage()));
+                                emitter.complete();
+                            } catch (IOException e) {
+                                emitter.completeWithError(e);
+                            }
+                        }
+                );
+            } catch (Exception e) {
+                emitter.completeWithError(e);
+            }
+        });
+
+        return emitter;
     }
 
     @PostMapping("/optimize")
