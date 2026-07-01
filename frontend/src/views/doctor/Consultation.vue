@@ -448,8 +448,6 @@ async function loadMessages() {
     const res = await getConsultationMessages(registrationId)
     if (res.code === 200 && res.data) {
       messages.value = res.data
-      await nextTick()
-      scrollToBottom()
     }
   } catch (e) {
     console.error("加载聊天消息失败", e)

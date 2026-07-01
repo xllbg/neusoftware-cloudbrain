@@ -16,7 +16,7 @@
             v-model="prescSearchKeyword"
             placeholder="搜索患者姓名或处方号"
             clearable
-            style="width: 200px; margin-bottom: 12px"
+            style="width: 280px; margin-bottom: 12px"
           >
             <template #prefix>
               <el-icon><Search /></el-icon>
@@ -44,10 +44,10 @@
               <el-tag :type="getStatusTag(row.status)">{{ getStatusLabel(row.status) }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="createTime" label="开具时间" width="160">
+          <el-table-column prop="createTime" label="开具时间" min-width="160">
             <template #default="{ row }">{{ formatDateTime(row.createTime) }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="150" fixed="right">
+          <el-table-column label="操作" width="150">
             <template #default="{ row }">
               <div class="action-buttons">
                 <el-button type="primary" size="small" @click="viewPrescription(row)">查看处方</el-button>
@@ -67,7 +67,7 @@
             v-model="recordSearchKeyword"
             placeholder="搜索患者姓名或ID"
             clearable
-            style="width: 200px; margin-bottom: 12px"
+            style="width: 280px; margin-bottom: 12px"
           >
             <template #prefix>
               <el-icon><Search /></el-icon>
@@ -92,7 +92,7 @@
           <el-table-column prop="createTime" label="创建时间" width="160">
             <template #default="{ row }">{{ formatDateTime(row.createTime) }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="120" fixed="right">
+          <el-table-column label="操作" width="120">
             <template #default="{ row }">
               <div class="action-buttons">
                 <el-button type="primary" size="small" @click="viewRecord(row)">查看病历</el-button>

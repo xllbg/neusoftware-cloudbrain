@@ -77,7 +77,7 @@
             <el-tag :type="getStatusTag(row.status)" size="small">{{ getStatusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="240" fixed="right">
+        <el-table-column label="操作" width="240">
           <template #default="{ row }">
             <el-button
               v-if="row.status === 'pending'"
@@ -87,14 +87,17 @@
             >
               接诊
             </el-button>
-            <el-button
-              v-else-if="row.status === 'in_progress'"
-              type="success"
-              size="small"
-              @click="goToConsultation(row)"
-            >
-              问诊
-            </el-button>
+            <template v-else-if="row.status === 'in_progress'">
+              <el-button
+                v-if="row.doctorId === userStore.userId"
+                type="success"
+                size="small"
+                @click="goToConsultation(row)"
+              >
+                问诊
+              </el-button>
+              <el-tag v-else type="info" size="small">接诊中</el-tag>
+            </template>
             <el-dropdown v-else style="margin-left: 8px">
               <el-button size="small">
                 查看
