@@ -138,18 +138,20 @@
         </div>
 
         <table class="info-table">
-          <tr>
-            <td class="label">患者姓名</td>
-            <td>{{ currentPrescription.patientName }}</td>
-            <td class="label">处方医生</td>
-            <td>{{ currentPrescription.doctorName }}</td>
-          </tr>
-          <tr>
-            <td class="label">处方状态</td>
-            <td colspan="3">
-              <el-tag :type="getStatusTag(currentPrescription.status)">{{ getStatusLabel(currentPrescription.status) }}</el-tag>
-            </td>
-          </tr>
+          <tbody>
+            <tr>
+              <td class="label">患者姓名</td>
+              <td>{{ currentPrescription.patientName }}</td>
+              <td class="label">处方医生</td>
+              <td>{{ currentPrescription.doctorName }}</td>
+            </tr>
+            <tr>
+              <td class="label">处方状态</td>
+              <td colspan="3">
+                <el-tag :type="getStatusTag(currentPrescription.status)">{{ getStatusLabel(currentPrescription.status) }}</el-tag>
+              </td>
+            </tr>
+          </tbody>
         </table>
 
         <div class="section-title">Rp</div>
@@ -176,10 +178,12 @@
         </table>
 
         <table class="info-table mt-20" v-if="currentPrescription.usage">
-          <tr>
-            <td class="label" style="width: 100px;">用药说明</td>
-            <td>{{ currentPrescription.usage }}</td>
-          </tr>
+          <tbody>
+            <tr>
+              <td class="label" style="width: 100px;">用药说明</td>
+              <td>{{ currentPrescription.usage }}</td>
+            </tr>
+          </tbody>
         </table>
 
         <div class="prescription-footer">
@@ -208,12 +212,14 @@
         </div>
 
         <table class="info-table">
-          <tr>
-            <td class="label">患者姓名</td>
-            <td>{{ currentMedicalRecord.patientName }}</td>
-            <td class="label">接诊医生</td>
-            <td>{{ currentMedicalRecord.doctorName }}</td>
-          </tr>
+          <tbody>
+            <tr>
+              <td class="label">患者姓名</td>
+              <td>{{ currentMedicalRecord.patientName }}</td>
+              <td class="label">接诊医生</td>
+              <td>{{ currentMedicalRecord.doctorName }}</td>
+            </tr>
+          </tbody>
         </table>
 
         <div class="record-section">
