@@ -27,4 +27,19 @@ public class LoginResponse {
 
     @Schema(description = "角色", example = "PATIENT")
     private String role;
+
+    @Schema(description = "手机号", example = "13800138000")
+    private String phone;
+
+    @Schema(description = "性别", example = "男")
+    private String gender;
+
+    @Schema(description = "年龄", example = "30")
+    private Integer age;
+
+    @Schema(description = "身份证号", example = "110101199001011234")
+    private String idCard;
+
+    @Schema(description = "地址", example = "北京市朝阳区")
+    private String address;
 }

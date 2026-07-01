@@ -47,6 +47,11 @@ public class PatientService {
                 .username(saved.getUsername())
                 .name(saved.getName())
                 .role("PATIENT")
+                .phone(saved.getPhone())
+                .gender(saved.getGender())
+                .age(saved.getAge())
+                .idCard(saved.getIdCard())
+                .address(saved.getAddress())
                 .build();
     }
 
@@ -71,6 +76,11 @@ public class PatientService {
                 .username(patient.getUsername())
                 .name(patient.getName())
                 .role("PATIENT")
+                .phone(patient.getPhone())
+                .gender(patient.getGender())
+                .age(patient.getAge())
+                .idCard(patient.getIdCard())
+                .address(patient.getAddress())
                 .build();
     }
 
@@ -94,6 +104,11 @@ public class PatientService {
                 .username(patient.getUsername())
                 .name(patient.getName())
                 .role("PATIENT")
+                .phone(patient.getPhone())
+                .gender(patient.getGender())
+                .age(patient.getAge())
+                .idCard(patient.getIdCard())
+                .address(patient.getAddress())
                 .build();
     }
 }

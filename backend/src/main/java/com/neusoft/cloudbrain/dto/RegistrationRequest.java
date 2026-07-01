@@ -40,4 +40,7 @@ public class RegistrationRequest {
 
     @Schema(description = "症状描述", example = "头痛发烧")
     private String symptom;
+
+    @Schema(description = "AI分诊结果，来自智能分诊则传，直接挂号不传", example = "建议内科就诊")
+    private String triageResult;
 }
