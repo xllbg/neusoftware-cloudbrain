@@ -104,6 +104,83 @@ public class AiService {
             "心内科", "呼吸内科", "神经内科", "消化内科", "骨科", "儿科", "内科", "普外科", "急诊科", "妇科", "产科", "皮肤科", "眼科", "耳鼻喉科", "口腔科", "泌尿外科", "胸外科", "血液科", "内分泌科", "肿瘤科"
     ));
 
+    // ========== 科室专属 Prompt 模板 ==========
+
+    private static final Map<String, String> DEPARTMENT_PROMPT_EXTENSIONS = new HashMap<>();
+
+    static {
+        DEPARTMENT_PROMPT_EXTENSIONS.put("儿科",
+                "【儿科专项要求】\n" +
+                "1. 注意使用通俗易懂的语言描述病情，方便家长理解\n" +
+                "2. 重点评估：发热情况（体温、热型）、饮食、睡眠、大小便\n" +
+                "3. 用药剂量需标注体重参考范围\n" +
+                "4. 重点关注传染病排查（手足口、水痘、流感等）\n");
+
+        DEPARTMENT_PROMPT_EXTENSIONS.put("心内科",
+                "【心内科专项要求】\n" +
+                "1. 重点描述：胸痛性质（压榨样/刺痛/闷痛）、放射部位、持续时间\n" +
+                "2. 心血管危险因素：高血压、糖尿病、血脂异常、吸烟史、家族史\n" +
+                "3. 重点关注：心电图、心肌酶谱、血压监测结果\n" +
+                "4. 心功能分级评估（NYHA分级）\n");
+
+        DEPARTMENT_PROMPT_EXTENSIONS.put("骨科",
+                "【骨科专项要求】\n" +
+                "1. 重点描述：受伤机制、疼痛部位、肿胀程度、活动受限范围\n" +
+                "2. 详细记录：影像学检查结果（X线/CT/MRI）\n" +
+                "3. 评估神经血管功能：远端血运、感觉、运动功能\n" +
+                "4. 关注：骨折分型、关节稳定性、石膏/手术方案选择\n");
+
+        DEPARTMENT_PROMPT_EXTENSIONS.put("呼吸内科",
+                "【呼吸内科专项要求】\n" +
+                "1. 重点描述：咳嗽性质（干咳/咳痰）、痰液性状颜色、咯血\n" +
+                "2. 评估：呼吸困难程度、发热曲线、胸痛与呼吸的关系\n" +
+                "3. 重点关注：血常规、CRP、胸部影像学、血气分析结果\n" +
+                "4. 传染病排查：结核、新冠病毒等\n");
+
+        DEPARTMENT_PROMPT_EXTENSIONS.put("消化内科",
+                "【消化内科专项要求】\n" +
+                "1. 重点描述：腹痛部位（上腹/下腹/脐周）、性质、与饮食关系\n" +
+                "2. 消化道症状：恶心呕吐、腹泻便秘、便血、黄疸\n" +
+                "3. 重点关注：胃镜/肠镜结果、幽门螺杆菌检测、肝功能\n" +
+                "4. 饮食与生活习惯评估\n");
+
+        DEPARTMENT_PROMPT_EXTENSIONS.put("神经内科",
+                "【神经内科专项要求】\n" +
+                "1. 重点描述：头痛性质（胀痛/搏动性）、眩晕特点、意识状态\n" +
+                "2. 详细评估：神经系统定位体征（颅神经、肌力、感觉、共济运动）\n" +
+                "3. 重点关注：头颅CT/MRI、脑电图、脑脊液检查\n" +
+                "4. 脑血管病危险因素评估\n");
+
+        DEPARTMENT_PROMPT_EXTENSIONS.put("皮肤科",
+                "【皮肤科专项要求】\n" +
+                "1. 重点描述：皮疹形态（斑疹/丘疹/水疱）、分布部位、瘙痒程度\n" +
+                "2. 评估：发病诱因（食物/药物/接触物）、病程演变\n" +
+                "3. 重点关注：皮肤科专科检查描述（皮损类型、边界、表面特征）\n");
+
+        DEPARTMENT_PROMPT_EXTENSIONS.put("妇科",
+                "【妇科专项要求】\n" +
+                "1. 重点描述：月经情况（周期/经量/痛经）、阴道分泌物性状\n" +
+                "2. 评估：下腹痛与月经周期的关系、异常出血\n" +
+                "3. 重点关注：妇科B超、宫颈筛查、性激素检查\n" +
+                "4. 孕产史、避孕情况记录\n");
+
+        DEPARTMENT_PROMPT_EXTENSIONS.put("眼科",
+                "【眼科专项要求】\n" +
+                "1. 重点描述：视力变化（突发/渐进）、视野缺损、眼痛性质\n" +
+                "2. 评估：眼压、眼底检查、屈光状态\n" +
+                "3. 重点关注：视力表、裂隙灯、眼底镜检查结果\n");
+    }
+
+    /**
+     * 获取科室专属的 Prompt 扩展内容
+     * 无对应科室时返回空字符串使用通用模板
+     */
+    private static String getDepartmentPromptExtension(String department) {
+        if (department == null || department.isBlank()) return "";
+        String normalized = DEPARTMENT_ALIASES.getOrDefault(department, department);
+        return DEPARTMENT_PROMPT_EXTENSIONS.getOrDefault(normalized, "");
+    }
+
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
@@ -328,6 +405,12 @@ public class AiService {
         promptBuilder.append("1. 内容要真实、合理、符合医学规范\n");
         promptBuilder.append("2. 根据提供的信息合理推断，信息不足的地方可以留空或写\"待进一步检查\"\n");
         promptBuilder.append("3. 语言专业、准确，符合病历书写规范\n");
+
+        String deptExtension = getDepartmentPromptExtension(department);
+        if (!deptExtension.isEmpty()) {
+            promptBuilder.append(deptExtension);
+        }
+
         promptBuilder.append("4. 只返回JSON，不要其他任何文字");
 
         String prompt = promptBuilder.toString();
@@ -509,6 +592,12 @@ public class AiService {
         promptBuilder.append("1. 内容要真实、合理、符合医学规范\n");
         promptBuilder.append("2. 根据提供的信息合理推断，信息不足的地方可以留空或写\"待进一步检查\"\n");
         promptBuilder.append("3. 语言专业、准确，符合病历书写规范\n");
+
+        String deptExtension = getDepartmentPromptExtension(department);
+        if (!deptExtension.isEmpty()) {
+            promptBuilder.append(deptExtension);
+        }
+
         promptBuilder.append("4. 只返回JSON，不要其他任何文字");
 
         String prompt = promptBuilder.toString();
